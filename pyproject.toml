@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "planning-library"
+version = "0.1.0"
+description = ""
+authors = []
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+langchain = "^0.1.4"
+langchain-experimental = "^0.0.49"
+langchain-openai = "^0.0.5"
+
+
+[tool.poetry.group.dev.dependencies]
+black = {extras = ["jupyter"], version = "^23.7.0"}
+isort = "^5.12.0"
+mypy = "^1.5.0"
+pytest = "^7.4.0"
+
+[tool.poetry.group.eda.dependencies]
+jupyter = "^1.0.0"
+pandas = "^2.0.3"
+matplotlib = "^3.7.2"
+seaborn = "^0.12.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[tool.isort]
+line_length = 120
+py_version = 310
+profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = []
+ignore_missing_imports = true
