@@ -25,9 +25,10 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         current_state: List[Tuple[AgentAction, str]],
         max_num_thoughts: Optional[int] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> List[str]:
+    ) -> List[Union[AgentAction, AgentFinish]]:
         max_num_thoughts = self.max_num_thoughts if max_num_thoughts is None else max_num_thoughts
         return self.thought_generator.generate_thoughts(
+            agent=self.agent,
             inputs=inputs,
             current_state=current_state,
             max_num_thoughts=max_num_thoughts,
@@ -38,9 +39,9 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         self,
         inputs: Dict[str, str],
         current_state: List[Tuple[AgentAction, str]],
-        thoughts: List[str],
+        thoughts: List[Union[AgentAction, AgentFinish]],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> List[str]:
+    ) -> List[Union[AgentAction, AgentFinish]]:
         assert self.thought_sorter is not None, "Sorting enabled, but thought sorter was not passed."
         return self.thought_sorter.sort_thoughts(
             thoughts=thoughts,
@@ -53,7 +54,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         self,
         inputs: Dict[str, str],
         current_state: List[Tuple[AgentAction, str]],
-        thought: str,
+        thought: Union[AgentAction, AgentFinish],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> float:
         return self.thought_evaluator.evaluate_thought(
@@ -93,29 +94,20 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
 
             # proceed only with thoughts with value above a certain threshold
             if cur_thought_value > self.value_threshold:
-                # TODO: agent should be a thought generator?
-                # cur_agent_action = self.agent.plan(
-                #     intermediate_steps,
-                #     callbacks=run_manager.get_child() if run_manager else None,
-                #     thought=cur_thought,
-                #     **inputs,
-                # )
-                #
-                # if isinstance(cur_agent_action, AgentFinish):
-                #     return cur_agent_action
-                #
-                # cur_result = self._perform_agent_action(
-                #     name_to_tool_map=name_to_tool_map,
-                #     color_mapping=color_mapping,
-                #     agent_action=cur_agent_action,
-                #     run_manager=run_manager,
-                # )
+                if isinstance(cur_thought, AgentFinish):
+                    return cur_thought
+
+                cur_result = self._perform_agent_action(
+                    name_to_tool_map=name_to_tool_map,
+                    color_mapping=color_mapping,
+                    agent_action=cur_thought,
+                    run_manager=run_manager,
+                )
 
                 return self._dfs(
                     inputs=inputs,
                     cur_step=cur_step + 1,
-                    # TODO: fix
-                    intermediate_steps=intermediate_steps + [cur_thought],  # type: ignore[list-item]
+                    intermediate_steps=intermediate_steps + [(cur_result.action, cur_result.observation)],
                     name_to_tool_map=name_to_tool_map,
                     color_mapping=color_mapping,
                     run_manager=run_manager,

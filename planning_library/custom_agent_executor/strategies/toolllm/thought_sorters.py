@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
-from langchain_core.agents import AgentAction
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManager
 
 
@@ -11,7 +11,7 @@ class BaseThoughtSorter(ABC):
         self,
         inputs: Dict[str, str],
         current_state: List[Tuple[AgentAction, str]],
-        thoughts: List[str],
+        thoughts: List[Union[AgentAction, AgentFinish]],
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[str]:
+    ) -> List[Union[AgentAction, AgentFinish]]:
         ...

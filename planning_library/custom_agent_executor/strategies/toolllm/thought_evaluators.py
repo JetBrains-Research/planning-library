@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from langchain_core.agents import AgentAction
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManager
 from langchain_core.runnables import Runnable
 
@@ -12,7 +12,7 @@ class BaseThoughtEvaluator(ABC):
         self,
         inputs: Dict[str, str],
         current_state: List[Tuple[AgentAction, str]],
-        next_thought: str,
+        next_thought: Union[AgentAction, AgentFinish],
         run_manager: Optional[CallbackManager] = None,
     ) -> float:
         ...
@@ -26,7 +26,7 @@ class LLMThoughtEvaluator(BaseThoughtEvaluator):
         self,
         inputs: Dict[str, str],
         current_state: List[Tuple[AgentAction, str]],
-        next_thought: str,
+        next_thought: Union[AgentAction, AgentFinish],
         run_manager: Optional[CallbackManager] = None,
     ) -> float:
         return self.llm_chain.invoke(

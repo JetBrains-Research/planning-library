@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Union
 
 from langchain.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
-from langchain_core.exceptions import OutputParserException
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.output_parsers import BaseOutputParser
 
 game_of_24_generate_prompt = ChatPromptTemplate.from_messages(
@@ -23,7 +23,12 @@ game_of_24_generate_prompt = ChatPromptTemplate.from_messages(
                     "inputs": "2 8 8 14",
                     "max_num_thoughts": "8",
                     "thought": "2 + 8 = 10 (left: 8 10 14)\n8 / 2 = 4 (left: 4 8 14)\n14 + 2 = 16 (left: 8 8 16)\n2 * 8 = 16 (left: 8 14 16)\n8 - 2 = 6 (left: 6 8 14)\n14 - 8 = 6 (left: 2 6 8)\n14 /  2 = 7 (left: 7 8 8)\n14 - 2 = 12 (left: 8 8 12)",
-                }
+                },
+                {
+                    "inputs": "10 14",
+                    "max_num_thoughts": "1",
+                    "thought": "10 + 14 = 24",
+                },
             ],
         ),
         ("human", "Input: {inputs}\n{max_num_thoughts} variants for a possible next step:"),
@@ -31,7 +36,13 @@ game_of_24_generate_prompt = ChatPromptTemplate.from_messages(
 )
 
 
-class GameOf24GenerateOutputParser(BaseOutputParser[List[str]]):
-    def parse(self, text: str) -> List[str]:
-        text_lines = text.split("\n")
-        return text_lines
+class GameOf24GenerateOutputParser(BaseOutputParser[List[Union[AgentAction, AgentFinish]]]):
+    def parse(self, text: str) -> List[Union[AgentAction, AgentFinish]]:
+        outputs: List[Union[AgentAction, AgentFinish]] = []
+        for line in text.split("\n"):
+            if line.endswith("= 24"):
+                outputs.append(AgentFinish({"output": line}, line))
+            else:
+                outputs.append(AgentAction(tool="simple_tool", tool_input=line, log=line))
+
+        return outputs
