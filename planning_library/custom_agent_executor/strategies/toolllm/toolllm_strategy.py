@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManagerForChainRun
+from langchain_core.exceptions import OutputParserException
 from langchain_core.tools import BaseTool
 
 from ..base_strategy import BaseStrategy
@@ -16,6 +17,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
     max_num_thoughts: int
     max_num_steps: int
     value_threshold: float
+    max_num_retries_evaluator: int
     thought_sorter: Optional[BaseThoughtSorter] = None
     do_sorting: bool = False  # True for DFS (Tree-of-Thoughts), False for DFSDT (ToolLLM)
 
@@ -57,12 +59,18 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         thought: Union[AgentAction, AgentFinish],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> float:
-        return self.thought_evaluator.evaluate_thought(
-            inputs=inputs,
-            current_state=current_state,
-            next_thought=thought,
-            run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
-        )
+        num_retries_evaluator = 0
+        while num_retries_evaluator < self.max_num_retries_evaluator:
+            try:
+                return self.thought_evaluator.evaluate_thought(
+                    inputs=inputs,
+                    current_state=current_state,
+                    next_thought=thought,
+                    run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
+                )
+            except OutputParserException:
+                num_retries_evaluator += 1
+        raise ValueError(f"Could not evaluate thought {thought}")
 
     def _dfs(
         self,
@@ -72,10 +80,10 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> AgentAction | AgentFinish:
+    ) -> Tuple[AgentFinish, List[Tuple[AgentAction, str]]]:
         # stop when number of steps is more than T
         if cur_step > self.max_num_steps:
-            return AgentFinish({"output": "Agent stopped due to iteration limit."}, "")
+            return AgentFinish({"output": "Agent stopped due to iteration limit."}, ""), intermediate_steps
 
         # generate k possible next steps
         thoughts = self._generate_thoughts(inputs=inputs, current_state=intermediate_steps, run_manager=run_manager)
@@ -87,6 +95,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
             )
 
         for cur_thought in thoughts:
+            # TODO: try/except? retries? leave as is?
             # evaluate each thought
             cur_thought_value = self._evaluate_thought(
                 inputs=inputs, current_state=intermediate_steps, thought=cur_thought, run_manager=run_manager
@@ -95,7 +104,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
             # proceed only with thoughts with value above a certain threshold
             if cur_thought_value > self.value_threshold:
                 if isinstance(cur_thought, AgentFinish):
-                    return cur_thought
+                    return cur_thought, intermediate_steps
 
                 cur_result = self._perform_agent_action(
                     name_to_tool_map=name_to_tool_map,
@@ -104,7 +113,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
                     run_manager=run_manager,
                 )
 
-                return self._dfs(
+                dfs_result, dfs_intermediate_steps = self._dfs(
                     inputs=inputs,
                     cur_step=cur_step + 1,
                     intermediate_steps=intermediate_steps + [(cur_result.action, cur_result.observation)],
@@ -113,7 +122,13 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
                     run_manager=run_manager,
                 )
 
-        return AgentFinish({"output": "Agent stopped due to no promising thoughts available."}, "")
+                if isinstance(dfs_result, AgentFinish) and dfs_result.return_values["output"] not in [
+                    "Agent stopped due to iteration limit.",
+                    "Agent stopped due to no promising thoughts available.",
+                ]:
+                    return dfs_result, dfs_intermediate_steps
+
+        return AgentFinish({"output": "Agent stopped due to no promising thoughts available."}, ""), intermediate_steps
 
     def _run_strategy(
         self,
@@ -122,8 +137,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         inputs: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Tuple[AgentFinish, List[Tuple[AgentAction, str]]]:
-        # TODO: process intermediate_steps (2nd output) correctly
-        output = self._dfs(
+        output, intermediate_steps = self._dfs(
             name_to_tool_map=name_to_tool_map,
             color_mapping=color_mapping,
             inputs=inputs,
@@ -132,6 +146,4 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
             cur_step=0,
         )
 
-        # TODO: ugly?
-        assert isinstance(output, AgentFinish)
-        return output, []
+        return output, intermediate_steps

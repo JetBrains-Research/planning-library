@@ -41,8 +41,8 @@ class GameOf24GenerateOutputParser(BaseOutputParser[List[Union[AgentAction, Agen
         outputs: List[Union[AgentAction, AgentFinish]] = []
         for line in text.split("\n"):
             if line.endswith("= 24"):
-                outputs.append(AgentFinish({"output": line}, line))
+                outputs.append(AgentFinish({"output": line}, ""))
             else:
-                outputs.append(AgentAction(tool="simple_tool", tool_input=line, log=line))
+                outputs.append(AgentAction(tool="simple_tool", tool_input=line, log=""))
 
         return outputs
