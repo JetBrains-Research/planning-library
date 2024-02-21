@@ -1909,6 +1909,20 @@ openai = ">=1.10.0,<2.0.0"
 tiktoken = ">=0.5.2,<0.6.0"
 
 [[package]]
+name = "langgraph"
+version = "0.0.24"
+description = "langgraph"
+optional = false
+python-versions = ">=3.9.0,<4.0"
+files = [
+    {file = "langgraph-0.0.24-py3-none-any.whl", hash = "sha256:746edf4c16cde724802b072a5cec6b0341b762d7e7e2cd5f240fb7bb6a38d9a9"},
+    {file = "langgraph-0.0.24.tar.gz", hash = "sha256:9e3c1b05b7716c141615080f73cb189dca6d773d6a13bf95c73098f42305f465"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.16,<0.2.0"
+
+[[package]]
 name = "langsmith"
 version = "0.0.87"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
@@ -4331,4 +4345,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "4a099e42af70bed1dea568655268ba3b2f293fb1e0a0a287ab549b3d9345476a"
+content-hash = "f8cc3bbc78a2bc15c71b524a434f366abee87c76c9c8dc7861dcfcf35b9d0651"
