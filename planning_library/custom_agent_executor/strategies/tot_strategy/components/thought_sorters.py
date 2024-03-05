@@ -10,8 +10,8 @@ class BaseThoughtSorter(ABC):
     def sort_thoughts(
         self,
         inputs: Dict[str, str],
-        current_state: List[Tuple[AgentAction, str]],
-        thoughts: List[Union[AgentAction, AgentFinish]],
+        trajectory: List[Tuple[AgentAction, str]],
+        thoughts: List[Union[List[AgentAction], AgentAction, AgentFinish]],
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[Union[AgentAction, AgentFinish]]:
+    ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
         ...
