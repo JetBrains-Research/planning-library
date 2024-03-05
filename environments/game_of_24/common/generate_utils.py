@@ -1,15 +1,22 @@
-from typing import List, Union
+from langchain.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate, MessagesPlaceholder
 
-from langchain.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.output_parsers import BaseOutputParser
-
-game_of_24_generate_prompt = ChatPromptTemplate.from_messages(
+game_of_24_generate_openai_tools_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are a helpful assistant that proposes next steps in Game of 24."),
+        ("system", "You are a helpful assistant that plays Game of 24."),
         (
             "human",
-            "Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Each step, you are only allowed to choose two of the remaining numbers to obtain a new number. If you managed to obtain 24 in a proposed thought and there are no numbers left, output a final answer after the thought.",
+            "Your end goal is to obtain 24 from given numbers via basic arithmetic operations with given numbers. Use {max_num_thoughts} of available tool(s) to suggest possible next step(s) as the next step from current state. Make sure to suggest exactly {max_num_thoughts} tool call(s), no more and no less.",
+        ),
+        MessagesPlaceholder("agent_scratchpad"),
+    ]
+)
+
+game_of_24_few_shot_generate_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful assistant that plays Game of 24."),
+        (
+            "human",
+            "Use basic arithmetic operations (+ - * /) to obtain 24. Each step, you are only allowed to choose two of the remaining numbers to obtain a new number. If you managed to obtain 24 in a proposed thought and there are no numbers left, output a final answer after the thought.",
         ),
         FewShotChatMessagePromptTemplate(
             example_prompt=ChatPromptTemplate.from_messages(
@@ -48,17 +55,3 @@ game_of_24_generate_prompt = ChatPromptTemplate.from_messages(
         ),
     ]
 )
-
-
-class GameOf24GenerateOutputParser(BaseOutputParser[List[Union[AgentAction, AgentFinish]]]):
-    def parse(self, text: str) -> List[Union[AgentAction, AgentFinish]]:
-        outputs: List[Union[AgentAction, AgentFinish]] = []
-        for line in text.split("\n"):
-            line = line.lower()
-            if "answer:" in line:
-                outputs.append(
-                    AgentFinish({"output": line.split(";")[1].strip()[len("answer: ") :]}, "Successfully reached 24.")
-                )
-            else:
-                outputs.append(AgentAction(tool="simple_tool", tool_input=line, log=""))
-        return outputs

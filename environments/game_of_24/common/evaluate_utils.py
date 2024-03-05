@@ -7,51 +7,81 @@ from langchain_core.output_parsers import BaseOutputParser
 _few_shot_evaluate_prompt = FewShotChatMessagePromptTemplate(
     example_prompt=ChatPromptTemplate.from_messages(
         [
-            ("human", "Input: {input}\nThought: {thought}\nJudge:"),
+            ("human", "Input: {inputs}\nSteps taken: {trajectory}\nSuggestion: {next_thought} = {observation}\nJudge:"),
             ("ai", "{answer}"),
         ]
     ),
     examples=[
-        {"input": "2 8 14", "thought": "2 + 8 = 10 (left: 10 14)", "answer": "10 + 14 = 24\nsure"},
         {
-            "input": "6 8 14",
-            "thought": "2 + 8 = 10 (left: 10 14)",
-            "answer": "10 + 14 = 24\nbut there was no 2 in input\nimpossible",
+            "inputs": "1 1 8 14",
+            "trajectory": "; ".join(["1 + 1 = 2"]),
+            "next_thought": "2 + 8",
+            "observation": "10",
+            "answer": "Available numbers after previous steps were: 2 8 14, after last suggestion: 10 14\n10 + 14 = 24\nsure",
         },
         {
-            "input": "2 6 11",
-            "thought": "2 * 6 = 12 (left: 11 12)",
-            "answer": "11 + 12 = 23\n12 - 11 = 1\n11 * 12 = 132\n11 / 12 = 0.91\nimpossible",
+            "inputs": "2 12 8 14",
+            "trajectory": "; ".join(["12 / 2 = 6"]),
+            "next_thought": "2 + 8",
+            "observation": "10",
+            "answer": "Available numbers after previous steps were: 6 8 14, but last suggestion uses 2, which is no longer in the input\nimpossible",
         },
         {
-            "input": "2 2 4 10",
-            "thought": "2 + 2 = 4 (left: 4 4 10)",
-            "answer": "4 + 4 + 10 = 8 + 10 = 18\n4 * 10 - 4 = 40 - 4 = 36\n(10 - 4) * 4 = 6 * 4 = 24\nsure",
-        },
-        {"input": "4 1 9 10", "thought": "10 + 1 = 11 (left: 4 9 11)", "answer": "9 + 11 + 4 = 20 + 4 = 24\nsure"},
-        {
-            "input": "5 2 7 4",
-            "thought": "2 * 4 = 8 (left: 5 7 8)",
-            "answer": "5 + 7 + 8 = 12 + 8 = 20\n(8 - 5) * 7 = 3 * 7 = 21\nI cannot obtain 24 now, but numbers are within a reasonable range\nlikely",
+            "inputs": "24 6 12 11",
+            "trajectory": "; ".join(["24 / 12 = 2"]),
+            "next_thought": "2 * 6 = 12",
+            "observation": "12",
+            "answer": "Available numbers after previous steps were: 2 6 11, after last suggestion: 12 11\n11 + 12 = 23, 12 - 11 = 1, 11 * 12 = 132, 11 / 12 = 0.91\nimpossible",
         },
         {
-            "input": "5 6 2 3",
-            "thought": "2 * 3 = 6 (left: 5 6 6)",
-            "answer": "5 + 6 + 6 = 17\n(6 - 5) * 6 = 1 * 6 = 6\nI cannot obtain 24 now, but numbers are within a reasonable range\nlikely",
+            "inputs": "4 1 9 10",
+            "trajectory": "none",
+            "next_thought": "10 + 1",
+            "observation": "11",
+            "answer": "There were no previous steps, so available numbers were: 4 1 9 10. Numbers left after last suggestion: 4 9 11\n9 + 11 + 4 = 20 + 4 = 24\nsure",
         },
         {
-            "input": "11 2 10 5",
-            "thought": "2 * 5 = 10 (left: 10 10 11)",
-            "answer": "10 + 10 + 11 = 31\n(11 - 10) * 10 = 10\n10 10 10 are all too big\nimpossible",
+            "inputs": "5 2 7 4",
+            "trajectory": "none",
+            "next_thought": "2 * 4",
+            "observation": "8",
+            "answer": "There were no previous steps, so available numbers were: 5 2 7 4. Numbers left after last suggestion: 5 7 8\n5 + 7 + 8 = 12 + 8 = 20\n(8 - 5) * 7 = 3 * 7 = 21\nI cannot obtain 24 now, but numbers are within a reasonable range\nlikely",
         },
         {
-            "input": "5 1 2 3",
-            "thought": "5 - 2 = 3 (left: 1 3 3)",
-            "answer": "1 * 3 * 3 = 9\n(1 + 3) * 3 = 12\n1 3 3 are all too small\nimpossible",
+            "inputs": "11 2 10 5",
+            "trajectory": "none",
+            "next_thought": "2 * 5",
+            "observation": "10",
+            "answer": "There were no previous steps, so available numbers were: 11 2 10 5. Numbers left after last suggestion: 10 10 11\n10 + 10 + 11 = 31\n(11 - 10) * 10 = 10\n10 10 10 are all too big\nimpossible",
         },
-        {"input": "2 8", "thought": "2 + 8 = 10 (left: 10)", "answer": "10 != 24\nimpossible"},
-        {"input": "12", "thought": "12 + 12 = 24 (left: 24)", "answer": "there was only one number 12\nimpossible"},
-        {"input": "36 5", "thought": "36 / 5 = 7.2 (left: 7.2)", "answer": "only integers are allowed\nimpossible"},
+        {
+            "inputs": "5 1 2 3",
+            "trajectory": "none",
+            "next_thought": "5 - 2",
+            "observation": "3",
+            "answer": "There were no previous steps, so available numbers were: 5 1 2 3. Numbers left after last suggestion: 1 3 3\n1 * 3 * 3 = 9\n(1 + 3) * 3 = 12\n1 3 3 are all too small\nimpossible",
+        },
+        {
+            "inputs": "1 1 4 2",
+            "trajectory": "; ".join(["4 * 2 = 8", "1 + 1 = 2"]),
+            "next_thought": "2 + 8",
+            "observation": "10",
+            "answer": "Available numbers after previous steps were: 1 1 4 2 -> 1 1 8 -> 2 8. Numbers left after last suggestion: 10\n10 != 24\nimpossible",
+        },
+        {
+            "inputs": "2 2 2 5",
+            "trajectory": "; ".join(["2 + 2 = 4", "5 - 2 = 3", "3 * 4 = 12"]),
+            "next_thought": "12 + 12",
+            "observation": "24",
+            "answer": "Available numbers after previous steps were: 2 2 2 5 -> 4 2 5 -> 3 4 -> 12. Last suggestion uses two numbers 12, but there was only one left.\nimpossible",
+        },
+        {
+            "inputs": "2 2 2 5",
+            "trajectory": "none",
+            "next_thought": "get_remaining_numbers",
+            "observation": "2 2 2 5",
+            "answer": "This thought doesn't alter the numbers list\nsure",
+        },
     ],
 )
 
@@ -60,10 +90,10 @@ game_of_24_evaluate_prompt = ChatPromptTemplate.from_messages(
         ("system", "You are a helpful assistant that judges whether given numbers can reach 24."),
         (
             "human",
-            "Evaluate if given numbers can reach 24 (sure/likely/impossible)",
+            "Given inputs and intermediate steps for Game of 24, evaluate if a new suggestion is correct and allows to reach 24. You are allowed to comment your decision, but make sure to always output one of the following words in the end: 'sure', 'likely', 'impossible'. Here are some examples:\n",
         ),
         _few_shot_evaluate_prompt,
-        ("human", "Input: {inputs}\nThought: {thought}\nJudge:"),
+        ("human", "Input: {inputs}\nSteps taken: {trajectory}\nSuggestion: {next_thought} = {observation}\nJudge:"),
     ]
 )
 
@@ -91,10 +121,10 @@ game_of_24_last_step_evaluate_prompt = ChatPromptTemplate.from_messages(
         ("system", "You are a helpful assistant that judges whether answers to Game of 24 are correct."),
         (
             "human",
-            "Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Given an input and an answer, give a judgement (sure/impossible) if the answer is correct, i.e. it uses each input exactly once and no other numbers, and reach 24.",
+            "Given an input and an answer, give a judgement (sure/impossible) if the answer is correct, i.e. it uses each input exactly once and no other numbers, and reaches 24. Here are some examples:\n",
         ),
         _few_shot_last_step_evaluate_prompt,
-        ("human", "Input: {inputs}\nAnswer: {thought}\nJudge:"),
+        ("human", "Input: {inputs}\nSteps taken: {trajectory}\nAnswer: {next_thought}\nJudge:"),
     ]
 )
 
