@@ -44,7 +44,7 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def act(actor: BaseActor, state: ReflexionState) -> ReflexionState:
+    def act(state: ReflexionState, actor: BaseActor) -> ReflexionState:
         """Synchronous version of calling an agent and returning its result."""
         agent_outcome = actor.act(
             inputs=state["inputs"],
@@ -55,7 +55,7 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    async def aact(actor: BaseActor, state: ReflexionState) -> ReflexionState:
+    async def aact(state: ReflexionState, actor: BaseActor) -> ReflexionState:
         """Asynchronous version of calling an agent and returning its result."""
         agent_outcome = await actor.aact(
             inputs=state["inputs"],
@@ -67,7 +67,7 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def execute_tools(actor: BaseActor, state: ReflexionState) -> ReflexionState:
+    def execute_tools(state: ReflexionState, actor: BaseActor) -> ReflexionState:
         """Synchronous version of executing tools as previously requested by an agent."""
         assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
@@ -82,7 +82,7 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    async def aexecute_tools(actor: BaseActor, state: ReflexionState) -> ReflexionState:
+    async def aexecute_tools(state: ReflexionState, actor: BaseActor) -> ReflexionState:
         """Asynchronous version of executing tools as previously requested by an agent."""
         assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
@@ -98,9 +98,11 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def evaluate(evaluator: ReflexionEvaluator, state: ReflexionState) -> ReflexionState:
+    def evaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
         """Synchronous version of evaluating the outcome of the current attempt."""
-        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the evaluation step."
+        assert isinstance(
+            state["agent_outcome"], AgentFinish
+        ), "Agent outcome should be AgentFinish on the evaluation step."
         value, should_continue = evaluator.evaluate(
             inputs=state["inputs"], intermediate_steps=state["intermediate_steps"], agent_outcome=state["agent_outcome"]
         )
@@ -109,9 +111,12 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    async def aevaluate(evaluator: ReflexionEvaluator, state: ReflexionState) -> ReflexionState:
+    async def aevaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
         """Asynchronous version of evaluating the outcome of the current attempt."""
-        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the evaluation step."
+        assert isinstance(
+            state["agent_outcome"], AgentFinish
+        ), "Agent outcome should be AgentFinish on the evaluation step."
+
         value, should_continue = await evaluator.aevaluate(
             inputs=state["inputs"], intermediate_steps=state["intermediate_steps"], agent_outcome=state["agent_outcome"]
         )
@@ -120,22 +125,32 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def self_reflect(self_reflection: BaseSelfReflection, state: ReflexionState) -> ReflexionState:
+    def self_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
         """Synchronous version of self-reflecting on the current attempt."""
+        assert isinstance(
+            state["agent_outcome"], AgentFinish
+        ), "Agent outcome should be AgentFinish on the self-reflection step."
+
         reflection = self_reflection.self_reflect(
             inputs=state["inputs"],
             intermediate_steps=state["intermediate_steps"],
+            agent_outcome=state["agent_outcome"],
             evaluator_score=state["evaluator_score"],
         )
         state["self_reflections"].append(reflection)
         return state
 
     @staticmethod
-    async def aself_reflect(self_reflection: BaseSelfReflection, state: ReflexionState) -> ReflexionState:
+    async def aself_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
         """Asynchronous version of self-reflecting on the current attempt."""
+        assert isinstance(
+            state["agent_outcome"], AgentFinish
+        ), "Agent outcome should be AgentFinish on the self-reflection step."
+
         reflection = await self_reflection.aself_reflect(
             inputs=state["inputs"],
             intermediate_steps=state["intermediate_steps"],
+            agent_outcome=state["agent_outcome"],
             evaluator_score=state["evaluator_score"],
         )
         state["self_reflections"].append(reflection)
@@ -163,7 +178,8 @@ class ReflexionEdges:
 
     @staticmethod
     def should_continue_num_iterations(
-        max_num_iterations: Optional[int], state: ReflexionState
+        state: ReflexionState,
+        max_num_iterations: Optional[int],
     ) -> Literal["yes", "no"]:
         """Conditional edge that determines whether the main loop should be continued or stopped based on the number of iterations threshold.
 

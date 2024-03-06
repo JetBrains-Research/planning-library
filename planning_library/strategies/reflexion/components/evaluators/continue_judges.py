@@ -48,7 +48,7 @@ class ReflexionThresholdEvaluatorContinueJudge(ReflexionBaseEvaluatorContinueJud
         value: float,
         run_manager: Optional[CallbackManager],
     ) -> bool:
-        return value > self.threshold
+        return value < self.threshold
 
     async def ashould_continue(
         self,
@@ -58,4 +58,4 @@ class ReflexionThresholdEvaluatorContinueJudge(ReflexionBaseEvaluatorContinueJud
         value: float,
         run_manager: Optional[CallbackManager],
     ) -> bool:
-        return value > self.threshold
+        return value < self.threshold

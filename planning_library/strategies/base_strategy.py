@@ -174,7 +174,5 @@ class BaseCustomStrategy(Chain, ABC):
 class BaseLangGraphStrategy(ABC):
     @staticmethod
     @abstractmethod
-    def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent], tools: Sequence[BaseTool], **kwargs
-    ) -> Pregel:
+    def create(agent: Runnable, tools: Sequence[BaseTool], **kwargs) -> Pregel:
         ...

@@ -6,6 +6,7 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
+from ...utils import convert_runnable_to_agent
 from ..base_strategy import BaseLangGraphStrategy
 from .components.actors import AgentActor
 from .components.evaluators import ReflexionEvaluator
@@ -19,21 +20,24 @@ from .utils import ReflexionEvaluatorInput
 class ReflexionStrategy(BaseLangGraphStrategy):
     @staticmethod
     def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
+        agent: Runnable,
         tools: Sequence[BaseTool],
         evaluator_runnable: Optional[Runnable[ReflexionEvaluatorInput, Any]] = None,
         self_reflection_runnable: Optional[Runnable[Dict[str, Any], Any]] = None,
         max_num_iterations: Optional[int] = None,
+        value_threshold: Optional[float] = None,
         **kwargs,
     ) -> Pregel:
-        actor = AgentActor(agent=agent, tools=tools)
+        runnable_agent = convert_runnable_to_agent(agent)
+
+        actor = AgentActor(agent=runnable_agent, tools=tools)
 
         if evaluator_runnable is None:
             raise ValueError("Default evaluator is not provided yet.")
 
         evaluator = ReflexionEvaluator(
             backbone=ReflexionRunnableThoughtEvaluator(evaluator_runnable),
-            judge=ReflexionThresholdEvaluatorContinueJudge(0.5),
+            judge=ReflexionThresholdEvaluatorContinueJudge(value_threshold if value_threshold else 1.0),
         )
 
         if self_reflection_runnable is None:

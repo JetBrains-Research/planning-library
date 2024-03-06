@@ -98,37 +98,6 @@ game_of_24_evaluate_prompt = ChatPromptTemplate.from_messages(
 )
 
 
-_few_shot_last_step_evaluate_prompt = FewShotChatMessagePromptTemplate(
-    example_prompt=ChatPromptTemplate.from_messages(
-        [
-            ("human", "Input: {inputs}\nAnswer: {thought}\nJudge:"),
-            ("ai", "{answer}"),
-        ]
-    ),
-    examples=[
-        {"inputs": "4 4 6 8", "thought": "(4 + 8) * (6 - 4) = 24", "answer": "sure"},
-        {"inputs": "2 9 10 12", "thought": "2 * 12 * (10 - 9) = 24", "answer": "sure"},
-        {"inputs": "4 9 10 13", "thought": "(13 - 9) * (10 - 4) = 24", "answer": "sure"},
-        {"inputs": "4 4 6 8", "thought": "(4 + 8) * (6 - 4) + 1 = 25", "answer": "impossible"},
-        {"inputs": "2 9 10 12", "thought": "2 * 12 * (10 - 9) = 24", "answer": "sure"},
-        {"inputs": "2 9 10 12", "thought": "2 * (12 - 10) = 24", "answer": "impossible"},
-        {"inputs": "4 9 10 13", "thought": "(13 - 4) * (10 - 9) = 24", "answer": "impossible"},
-    ],
-)
-
-game_of_24_last_step_evaluate_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are a helpful assistant that judges whether answers to Game of 24 are correct."),
-        (
-            "human",
-            "Given an input and an answer, give a judgement (sure/impossible) if the answer is correct, i.e. it uses each input exactly once and no other numbers, and reaches 24. Here are some examples:\n",
-        ),
-        _few_shot_last_step_evaluate_prompt,
-        ("human", "Input: {inputs}\nSteps taken: {trajectory}\nAnswer: {next_thought}\nJudge:"),
-    ]
-)
-
-
 class GameOf24EvaluateOutputParser(BaseOutputParser[float]):
     values_map: Dict[str, float] = {"sure": 1.0, "likely": 0.5, "impossible": 0.0}
     parser_mode: Literal["strict", "loose"] = "loose"

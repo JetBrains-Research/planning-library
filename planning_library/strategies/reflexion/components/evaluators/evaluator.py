@@ -16,7 +16,7 @@ class ReflexionEvaluator:
         self,
         inputs: Dict[str, str],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
+        agent_outcome: AgentFinish,
         run_manager: Optional[CallbackManager] = None,
     ) -> Tuple[Any, bool]:
         value = self.backbone.evaluate(
@@ -38,7 +38,7 @@ class ReflexionEvaluator:
         self,
         inputs: Dict[str, str],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
+        agent_outcome: AgentFinish,
         run_manager: Optional[CallbackManager] = None,
     ) -> Tuple[Any, bool]:
         value = await self.backbone.aevaluate(
