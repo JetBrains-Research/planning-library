@@ -44,7 +44,7 @@ used the same
 way as the default [`AgentExecutor`](https://python.langchain.com/docs/modules/agents/quick_start#create-the-agent) from
 LangChain.
 
-```
+```python
 strategy_executor.invoke({"inputs": "Hello World"})
 ```
 
