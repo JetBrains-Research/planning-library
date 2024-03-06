@@ -34,7 +34,7 @@ strategy_executor = TreeOfThoughtsDFSStrategy.create(
 ```
 
 Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
-intermediate steps). We (:construction: will) provide some default implementations for them, but feel free to redefine
+intermediate steps). :construction: We will provide some default implementations for such components, but they can also be redefined
 them with custom runnables tailored for specific tasks.
 
 #### Using strategy
@@ -68,7 +68,7 @@ strategy_graph = ReflexionStrategy.create(agent=agent, tools=tools)
 ```
 
 Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
-intermediate steps). We (:construction: will) provide some default implementations for them, but feel free to redefine
+intermediate steps). :construction: We will provide some default implementations for such components, but they can also be redefined
 them with custom runnables tailored for specific tasks.
 
 #### Using strategy
