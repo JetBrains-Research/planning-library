@@ -8,7 +8,8 @@ from langchain_core.callbacks import CallbackManager
 
 
 class BaseThoughtGenerator(ABC):
-    generation_mode: Literal["sample", "propose"]
+    def __init__(self, generation_mode: Literal["sample", "propose"] = "sample"):
+        self.generation_mode = generation_mode
 
     @abstractmethod
     def generate(
@@ -44,14 +45,16 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
         # sample: `max_num_thoughts` i.i.d. requests
         if self.generation_mode == "sample":
-            results = [
-                agent.plan(
+            results: List[Union[AgentAction, List[AgentAction], AgentFinish]] = []
+            for _ in range(max_num_thoughts):
+                cur_result = agent.plan(
                     intermediate_steps=trajectory,
                     callbacks=run_manager,
+                    previous_thoughts=results,
                     **inputs,
                 )
-                for _ in range(max_num_thoughts)
-            ]
+                results.append(cur_result)
+
             return results
 
         # TODO propose: a single request that should return `max_num_thoughts` thoughts
@@ -67,6 +70,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
         # sample: `max_num_thoughts` i.i.d. requests
         if self.generation_mode == "sample":
+            # TODO: don't repeat suggestions in async version
             # TODO: no idea why mypy complains
             with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
                 tasks = [
