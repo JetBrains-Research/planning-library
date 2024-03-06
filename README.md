@@ -2,7 +2,11 @@
 
 ## Installation
 
-> :construction: TODO
+Currently, only installation from source is supported:
+
+```shell
+pip install git+https://github.com/JetBrains-Research/planning-library.git@saridormi-dev
+```
 
 ## Quick Tour
 
@@ -99,3 +103,7 @@ strategy_graph.invoke({"inputs": "Hello World"})
 
    Our implementation of Game of 24 is available under [`environments/game_of_24`](environments/game_of_24) folder. It
    includes a set of prompts, a set of tools and examples of running available strategies on Game of 24.
+
+   * Tree of Thoughts + DFS notebook: [`environment/game_of_24/tot_dfs.ipynb`](environments/game_of_24/tot_dfs.ipynb)
+   * Reflexion notebook: [`environment/game_of_24/reflexion.ipynb`](environments/game_of_24/reflexion.ipynb)
+   
