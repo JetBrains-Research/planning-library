@@ -5,7 +5,7 @@ from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.callbacks import CallbackManager
 from langchain_core.runnables import Runnable
 
-from ...tree_utils import EvaluatorInput
+from ...utils import EvaluatorInput
 
 
 class BaseThoughtEvaluatorBackbone(ABC):

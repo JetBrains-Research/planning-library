@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish
@@ -8,6 +8,8 @@ from langchain_core.callbacks import CallbackManager
 
 
 class BaseThoughtGenerator(ABC):
+    generation_mode: Literal["sample", "propose"]
+
     @abstractmethod
     def generate(
         self,
@@ -40,15 +42,20 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
-        results = [
-            agent.plan(
-                intermediate_steps=trajectory,
-                callbacks=run_manager,
-                **inputs,
-            )
-            for _ in range(max_num_thoughts)
-        ]
-        return results
+        # sample: `max_num_thoughts` i.i.d. requests
+        if self.generation_mode == "sample":
+            results = [
+                agent.plan(
+                    intermediate_steps=trajectory,
+                    callbacks=run_manager,
+                    **inputs,
+                )
+                for _ in range(max_num_thoughts)
+            ]
+            return results
+
+        # TODO propose: a single request that should return `max_num_thoughts` thoughts
+        raise ValueError("Current thought generation mode is not supported yet.")
 
     async def agenerate(
         self,
@@ -58,17 +65,22 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
-        # TODO: no idea why mypy complains
-        with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
-            tasks = [
-                tg.create_task(
-                    agent.aplan(
-                        intermediate_steps=trajectory,
-                        callbacks=run_manager,
-                        **inputs,
+        # sample: `max_num_thoughts` i.i.d. requests
+        if self.generation_mode == "sample":
+            # TODO: no idea why mypy complains
+            with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
+                tasks = [
+                    tg.create_task(
+                        agent.aplan(
+                            intermediate_steps=trajectory,
+                            callbacks=run_manager,
+                            **inputs,
+                        )
                     )
-                )
-                for _ in range(max_num_thoughts)
-            ]
+                    for _ in range(max_num_thoughts)
+                ]
 
-        return [task.result() for task in tasks]
+            return [task.result() for task in tasks]
+
+        # TODO propose: a single request that should return `max_num_thoughts` thoughts
+        raise ValueError("Current thought generation mode is not supported yet.")

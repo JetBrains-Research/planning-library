@@ -6,7 +6,7 @@ from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackMa
 from langchain_core.tools import BaseTool
 
 
-def _perform_agent_action(
+def perform_agent_action(
     agent_action: AgentAction,
     name_to_tool_map: Dict[str, BaseTool],
     color_mapping: Dict[str, str],
@@ -50,7 +50,7 @@ def _perform_agent_action(
     return AgentStep(action=agent_action, observation=observation)
 
 
-async def _aperform_agent_action(
+async def aperform_agent_action(
     name_to_tool_map: Dict[str, BaseTool],
     color_mapping: Dict[str, str],
     agent_action: AgentAction,

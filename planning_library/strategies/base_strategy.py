@@ -10,22 +10,14 @@ from langchain_core.pydantic_v1 import root_validator
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
+from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 
-class BaseStrategy(Chain, ABC):
+class BaseCustomStrategy(Chain, ABC):
     agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]
-    """The agent to run for creating a plan and determining actions
-    to take at each step of the execution loop."""
     tools: Sequence[BaseTool]
-    """The valid tools the agent can call."""
     return_intermediate_steps: bool = False
-    """Whether to return the agent's trajectory of intermediate steps
-    at the end in addition to the final output."""
     max_iterations: int = 15
-    """The maximum number of steps to take before ending the execution
-    loop.
-
-    Setting to 'None' could lead to an infinite loop."""
     verbose: bool = True
 
     @property
@@ -177,3 +169,12 @@ class BaseStrategy(Chain, ABC):
             outputs.append(output)
 
         return {"outputs": outputs}
+
+
+class BaseLangGraphStrategy(ABC):
+    @staticmethod
+    @abstractmethod
+    def create(
+        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent], tools: Sequence[BaseTool], **kwargs
+    ) -> Pregel:
+        ...

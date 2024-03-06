@@ -8,33 +8,34 @@
 
 > :construction: Subject to change
 
-Currently, we have two types of strategies: **custom strategies** and *
-*[LangGraph](https://github.com/langchain-ai/langgraph/tree/main) strategies**.
+Currently, we have two types of strategies: **custom strategies** and 
+**[LangGraph](https://github.com/langchain-ai/langgraph/tree/main) strategies**.
 
 ### Custom strategies
 
 Custom strategies follow the interface provided
-by [`BaseStrategy`](planning_library/custom_agent_executor/strategies/base_strategy.py). They are designed to be used in
+by [`BaseCustomStrategy`](planning_library/strategies/base_strategy.py). They are designed to be used in
 a very similar way to the
 default [`AgentExecutor`](https://python.langchain.com/docs/modules/agents/quick_start#create-the-agent) from LangChain.
 
-**Example:** [Tree of Thoughts + DFS](planning_library/custom_agent_executor/strategies/tot_strategy/tot_strategy.py).
+**Example:** [Tree of Thoughts + DFS](planning_library/strategies/tot_dfs/tot_strategy.py).
 
 ### LangGraph strategies
 
-Strategies powered by [LangGraph library](https://github.com/langchain-ai/langgraph) provide builder methods that
-require an agent and tools and return a
+Strategies powered by [LangGraph library](https://github.com/langchain-ai/langgraph) follow the interface provided
+by [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py). [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py)
+exposes static method `create`, which takes an agent and tools and returns a
 compiled [`StateGraph`](https://github.com/langchain-ai/langgraph?tab=readme-ov-file#stategraph) that exposes the same
 interface as any LangChain runnable.
 
-**Example:** [Reflexion](planning_library/langgraph_version/strategies/reflexion/reflexion.py).
+**Example:** [Reflexion](planning_library/strategies/reflexion/reflexion_strategy.py).
 
 ## Available Strategies
 
-|                     Name                      |       Implementation        |   Type    |                                                Paper                                                 |
-|:---------------------------------------------:|:---------------------------:|:---------:|:----------------------------------------------------------------------------------------------------:|
-| :construction: Tree of Thoughts + DFS / DFSDT | `TreeOfThoughtsDFSStrategy` |  Custom   | [:scroll: ToT](https://arxiv.org/abs/2305.10601), [:scroll: DFSDT](https://arxiv.org/abs/2307.16789) |
-|   :construction:                  Reflexion   | `create_reflexion_strategy` | LangGraph |                             [:scroll:](https://arxiv.org/abs/2303.11366)                             |
+|                     Name                      |                                   Implementation                                   |   Type    |                                                Paper                                                 |
+|:---------------------------------------------:|:----------------------------------------------------------------------------------:|:---------:|:----------------------------------------------------------------------------------------------------:|
+| :construction: Tree of Thoughts + DFS / DFSDT | [`TreeOfThoughtsDFSStrategy`](planning_library/strategies/tot_dfs/tot_strategy.py) |  Custom   | [:scroll: ToT](https://arxiv.org/abs/2305.10601), [:scroll: DFSDT](https://arxiv.org/abs/2307.16789) |
+|   :construction:                  Reflexion   | [`ReflexionStrategy`](planning_library/strategies/reflexion/reflexion_strategy.py) | LangGraph |                             [:scroll:](https://arxiv.org/abs/2303.11366)                             |
 
 ## Available Environments
 

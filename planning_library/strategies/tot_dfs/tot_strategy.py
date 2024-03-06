@@ -6,13 +6,13 @@ from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
 from langchain_core.tools import BaseTool
 
-from ...agent_utils import _aperform_agent_action, _perform_agent_action
-from ..base_strategy import BaseStrategy
+from ...utils import aperform_agent_action, perform_agent_action
+from ..base_strategy import BaseCustomStrategy
 from .components import BaseThoughtGenerator, BaseThoughtSorter, ThoughtEvaluator
-from .tree_utils import ToTNode
+from .utils import ToTNode
 
 
-class TreeOfThoughtsDFSStrategy(BaseStrategy):
+class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     thought_generator: BaseThoughtGenerator
     thought_evaluator: ThoughtEvaluator
     max_num_thoughts: int
@@ -29,7 +29,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Optional[Union[List[AgentStep], AgentStep]]:
         if isinstance(thought, AgentAction):
-            tool_result = _perform_agent_action(
+            tool_result = perform_agent_action(
                 agent_action=thought,
                 name_to_tool_map=name_to_tool_map,
                 color_mapping=color_mapping,
@@ -41,7 +41,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         elif isinstance(thought, list):
             observations = []
             for action in thought:
-                tool_result = _perform_agent_action(
+                tool_result = perform_agent_action(
                     agent_action=action,
                     name_to_tool_map=name_to_tool_map,
                     color_mapping=color_mapping,
@@ -61,7 +61,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Optional[Union[List[AgentStep], AgentStep]]:
         if isinstance(thought, AgentAction):
-            tool_result = await _aperform_agent_action(
+            tool_result = await aperform_agent_action(
                 agent_action=thought,
                 name_to_tool_map=name_to_tool_map,
                 color_mapping=color_mapping,
@@ -75,7 +75,7 @@ class TreeOfThoughtsDFSStrategy(BaseStrategy):
             with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
                 tool_results = [
                     tg.create_task(
-                        _aperform_agent_action(
+                        aperform_agent_action(
                             agent_action=action,
                             name_to_tool_map=name_to_tool_map,
                             color_mapping=color_mapping,
