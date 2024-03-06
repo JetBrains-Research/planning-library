@@ -1,25 +1,55 @@
 import asyncio
 from collections import deque
-from typing import Deque, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Deque, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
+from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 
 from ...utils import aperform_agent_action, perform_agent_action
 from ..base_strategy import BaseCustomStrategy
 from .components import BaseThoughtGenerator, BaseThoughtSorter, ThoughtEvaluator
+from .components.thought_evaluators import RunnableThoughtEvaluator, ThresholdThoughtEvaluatorContinueJudge
+from .components.thought_generators import AgentThoughtGenerator
 from .utils import ToTNode
 
 
 class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     thought_generator: BaseThoughtGenerator
     thought_evaluator: ThoughtEvaluator
-    max_num_thoughts: int
+    max_thoughts: int
     thought_sorter: Optional[BaseThoughtSorter] = None
     do_sorting: bool = False  # True for DFS (Tree-of-Thoughts), False for DFSDT (ToolLLM)
     root: Optional[ToTNode] = None
     terminals: List[ToTNode] = []
+
+    @staticmethod
+    def create(
+        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
+        tools: Sequence[BaseTool],
+        evaluator_runnable: Optional[Runnable] = None,
+        value_threshold: float = 0.5,
+        max_thoughts: int = 3,
+        max_iterations: int = 15,
+        **kwargs,
+    ) -> "TreeOfThoughtsDFSStrategy":
+        if evaluator_runnable is None:
+            raise ValueError("Default runnable for thought evaluator is not supported yet.")
+
+        strategy = TreeOfThoughtsDFSStrategy(
+            agent=agent,
+            tools=tools,
+            thought_generator=AgentThoughtGenerator(),
+            thought_evaluator=ThoughtEvaluator(
+                backbone=RunnableThoughtEvaluator(evaluator_runnable),
+                judge=ThresholdThoughtEvaluatorContinueJudge(value_threshold),
+            ),
+            max_thoughts=max_thoughts,
+            max_iterations=max_iterations,
+        )
+        return strategy
 
     def _perform_thought_actions(
         self,
@@ -106,7 +136,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             agent=self.agent,
             inputs=inputs,
             trajectory=trajectory,
-            max_num_thoughts=self.max_num_thoughts,
+            max_num_thoughts=self.max_thoughts,
             run_manager=run_manager.get_child(tag="generate_thoughts") if run_manager else None,
         )
 

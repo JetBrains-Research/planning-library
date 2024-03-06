@@ -76,6 +76,13 @@ class BaseCustomStrategy(Chain, ABC):
                 values["agent"] = RunnableAgent(runnable=agent)
         return values
 
+    @staticmethod
+    @abstractmethod
+    def create(
+        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent], tools: Sequence[BaseTool], **kwargs
+    ) -> "BaseCustomStrategy":
+        ...
+
     @abstractmethod
     def _run_strategy(
         self,

@@ -8,27 +8,78 @@
 
 > :construction: Subject to change
 
-Currently, we have two types of strategies: **custom strategies** and 
+Currently, we have two types of strategies: **custom strategies** and
 **[LangGraph](https://github.com/langchain-ai/langgraph/tree/main) strategies**.
 
 ### Custom strategies
 
 Custom strategies follow the interface provided
-by [`BaseCustomStrategy`](planning_library/strategies/base_strategy.py). They are designed to be used in
-a very similar way to the
-default [`AgentExecutor`](https://python.langchain.com/docs/modules/agents/quick_start#create-the-agent) from LangChain.
+by [`BaseCustomStrategy`](planning_library/strategies/base_strategy.py).
 
-**Example:** [Tree of Thoughts + DFS](planning_library/strategies/tot_dfs/tot_strategy.py).
+**Example:** [Tree of Thoughts + DFS](planning_library/strategies/tot_dfs/tot_strategy.py)
+
+#### Initializing strategy
+
+Each custom strategy can be created by envoking a static method `create` with at least agent and tools.
+
+```python
+from planning_library.strategies import TreeOfThoughtsDFSStrategy
+
+agent = ...  # any runnable that follows either RunnableAgent or RunnableMultiActionAgent
+tools = [...]  # any sequence of tools
+strategy_executor = TreeOfThoughtsDFSStrategy.create(
+    agent=agent,
+    tools=tools,
+)
+```
+
+Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
+intermediate steps). We (:construction: will) provide some default implementations for them, but feel free to redefine
+them with custom runnables tailored for specific tasks.
+
+#### Using strategy
+
+Each custom strategy is an instance of [`Chain`](https://python.langchain.com/docs/modules/chains/) and mostly can be
+used the same
+way as the default [`AgentExecutor`](https://python.langchain.com/docs/modules/agents/quick_start#create-the-agent) from
+LangChain.
+
+```
+strategy_executor.invoke({"inputs": "Hello World"})
+```
 
 ### LangGraph strategies
 
 Strategies powered by [LangGraph library](https://github.com/langchain-ai/langgraph) follow the interface provided
-by [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py). [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py)
-exposes static method `create`, which takes an agent and tools and returns a
+by [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py).
+
+**Example:** [Reflexion](planning_library/strategies/reflexion/reflexion_strategy.py)
+
+#### Initializing strategy
+
+Each LangGraph strategy can be created by envoking a static method `create` with (at least) agent and tools.
+
+```python
+from planning_library.strategies import ReflexionStrategy
+
+agent = ...  # any runnable that follows either RunnableAgent or RunnableMultiActionAgent
+tools = [...]  # any sequence of tools
+strategy_graph = ReflexionStrategy.create(agent=agent, tools=tools)
+```
+
+Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
+intermediate steps). We (:construction: will) provide some default implementations for them, but feel free to redefine
+them with custom runnables tailored for specific tasks.
+
+#### Using strategy
+
+[`BaseLangGraphStrategy.create`](planning_library/strategies/base_strategy.py) returns a
 compiled [`StateGraph`](https://github.com/langchain-ai/langgraph?tab=readme-ov-file#stategraph) that exposes the same
 interface as any LangChain runnable.
 
-**Example:** [Reflexion](planning_library/strategies/reflexion/reflexion_strategy.py).
+```python
+strategy_graph.invoke({"inputs": "Hello World"})
+```
 
 ## Available Strategies
 
