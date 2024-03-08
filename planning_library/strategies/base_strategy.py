@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
@@ -94,13 +94,13 @@ class BaseCustomStrategy(Chain, ABC):
         ...
 
     @abstractmethod
-    async def _arun_strategy(
+    def _arun_strategy(
         self,
         inputs: Dict[str, str],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
+    ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         ...
 
     def _return(
@@ -163,7 +163,7 @@ class BaseCustomStrategy(Chain, ABC):
         # We construct a mapping from each tool to a color, used for logging.
         color_mapping = get_color_mapping([tool.name for tool in self.tools], excluded_colors=["green"])
 
-        _outputs = await self._arun_strategy(
+        _outputs = self._arun_strategy(
             name_to_tool_map=name_to_tool_map,
             color_mapping=color_mapping,
             inputs=inputs,
@@ -171,7 +171,7 @@ class BaseCustomStrategy(Chain, ABC):
         )
 
         outputs = []
-        for _output, _intermediate_steps in _outputs:
+        async for _output, _intermediate_steps in _outputs:
             output = await self._areturn(_output, _intermediate_steps, run_manager=run_manager)
             outputs.append(output)
 

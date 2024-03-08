@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.callbacks import CallbackManager
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 
 
 class BaseThoughtSorter(ABC):
@@ -13,5 +13,15 @@ class BaseThoughtSorter(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         thoughts: List[Union[List[AgentAction], AgentAction, AgentFinish]],
         run_manager: Optional[CallbackManager] = None,
+    ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
+        ...
+
+    @abstractmethod
+    async def asort_thoughts(
+        self,
+        inputs: Dict[str, str],
+        trajectory: List[Tuple[AgentAction, str]],
+        thoughts: List[Union[List[AgentAction], AgentAction, AgentFinish]],
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
         ...

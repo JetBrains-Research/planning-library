@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
-from langchain_core.callbacks import CallbackManager
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 
 from .backbones import BaseThoughtEvaluatorBackbone
 from .continue_judges import BaseThoughtEvaluatorContinueJudge
@@ -43,9 +43,9 @@ class ThoughtEvaluator:
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[AgentAction, AgentFinish],
+        next_thought: Union[AgentAction, List[AgentAction], AgentFinish],
         observation: Optional[Union[List[AgentStep], AgentStep]],
-        run_manager: Optional[CallbackManager] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> bool:
         value = await self.backbone.aevaluate(
             inputs=inputs,

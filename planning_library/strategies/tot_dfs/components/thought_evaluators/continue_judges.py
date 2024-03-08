@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.callbacks import CallbackManager
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 
 
 class BaseThoughtEvaluatorContinueJudge(ABC):
@@ -27,7 +27,7 @@ class BaseThoughtEvaluatorContinueJudge(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
         value: Any,
-        run_manager: Optional[CallbackManager],
+        run_manager: Optional[AsyncCallbackManager],
     ) -> bool:
         ...
 
@@ -56,6 +56,6 @@ class ThresholdThoughtEvaluatorContinueJudge(BaseThoughtEvaluatorContinueJudge):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
         value: float,
-        run_manager: Optional[CallbackManager],
+        run_manager: Optional[AsyncCallbackManager],
     ) -> bool:
         return value > self.threshold

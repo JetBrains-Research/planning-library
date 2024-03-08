@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
-from langchain_core.callbacks import CallbackManager
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.runnables import Runnable
 
 from ...utils import EvaluatorInput
@@ -29,7 +29,7 @@ class BaseThoughtEvaluatorBackbone(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
         observation: Optional[Union[List[AgentStep], AgentStep]],
-        run_manager: Optional[CallbackManager] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         ...
 
@@ -59,7 +59,7 @@ class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
         observation: Optional[Union[List[AgentStep], AgentStep]],
-        run_manager: Optional[CallbackManager] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         result = await self.runnable.ainvoke(
             {"inputs": inputs, "trajectory": trajectory, "next_thought": next_thought, "observation": observation},

@@ -4,7 +4,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.callbacks import CallbackManager
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 
 
 class BaseThoughtGenerator(ABC):
@@ -29,7 +29,7 @@ class BaseThoughtGenerator(ABC):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
-        run_manager: Optional[CallbackManager] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
         ...
 
@@ -66,7 +66,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
-        run_manager: Optional[CallbackManager] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> List[Union[AgentAction, List[AgentAction], AgentFinish]]:
         # sample: `max_num_thoughts` i.i.d. requests
         if self.generation_mode == "sample":
