@@ -181,14 +181,14 @@ class ReflexionEdges:
     @staticmethod
     def should_continue_num_iterations(
         state: ReflexionState,
-        max_num_iterations: Optional[int],
+        max_iterations: Optional[int],
     ) -> Literal["yes", "no"]:
         """Conditional edge that determines whether the main loop should be continued or stopped based on the number of iterations threshold.
 
         If yes: execution finishes.
         If no: next iteration.
         """
-        if max_num_iterations is not None and state["iteration"] >= max_num_iterations:
+        if max_iterations is not None and state["iteration"] >= max_iterations:
             return "no"
         return "yes"
 
@@ -197,7 +197,7 @@ def create_reflexion_graph(
     actor: BaseActor,
     evaluator: ReflexionEvaluator,
     self_reflection: BaseSelfReflection,
-    max_num_iterations: Optional[int],
+    max_iterations: Optional[int],
 ) -> Pregel:
     """Builds a graph for Reflexion strategy."""
     builder = StateGraph(ReflexionState)
@@ -243,14 +243,9 @@ def create_reflexion_graph(
             "no": END,
         },
     )
-
-    # TODO: ugly hack to allow creating a png for reflexion graph
-    edge_condition = partial(ReflexionEdges.should_continue_num_iterations, max_num_iterations=max_num_iterations)
-    edge_condition.__name__ = edge_condition.func.__name__  # type: ignore[attr-defined]
-
     builder.add_conditional_edges(
         "self_reflect",
-        edge_condition,
+        partial(ReflexionEdges.should_continue_num_iterations, max_num_iterations=max_iterations),
         {"yes": "re_init", "no": END},
     )
     builder.add_edge("re_init", "act")

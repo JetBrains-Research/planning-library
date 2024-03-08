@@ -66,5 +66,5 @@ class ReflexionStrategy(BaseLangGraphStrategy):
         self_reflection = RunnableSelfReflection(self_reflection_runnable)
 
         return create_reflexion_graph(
-            actor=actor, evaluator=evaluator, self_reflection=self_reflection, max_num_iterations=max_num_iterations
+            actor=actor, evaluator=evaluator, self_reflection=self_reflection, max_iterations=max_iterations
         )
