@@ -12,6 +12,8 @@ from .components.self_reflections import BaseSelfReflection
 
 
 class ReflexionState(TypedDict):
+    """A state passed between nodes of Reflexion graph."""
+
     inputs: Dict[str, Any]
     agent_outcome: Optional[Union[List[AgentAction], AgentAction, AgentFinish]]
     evaluator_score: Any
@@ -99,7 +101,7 @@ class ReflexionNodes:
 
     @staticmethod
     def evaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
-        """Synchronous version of evaluating the outcome of the current attempt."""
+        """Synchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
@@ -112,7 +114,7 @@ class ReflexionNodes:
 
     @staticmethod
     async def aevaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
-        """Asynchronous version of evaluating the outcome of the current attempt."""
+        """Asynchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
@@ -126,7 +128,7 @@ class ReflexionNodes:
 
     @staticmethod
     def self_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
-        """Synchronous version of self-reflecting on the current attempt."""
+        """Synchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
@@ -142,7 +144,7 @@ class ReflexionNodes:
 
     @staticmethod
     async def aself_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
-        """Asynchronous version of self-reflecting on the current attempt."""
+        """Asynchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
@@ -197,6 +199,7 @@ def create_reflexion_graph(
     self_reflection: BaseSelfReflection,
     max_num_iterations: Optional[int],
 ) -> Pregel:
+    """Builds a graph for Reflexion strategy."""
     builder = StateGraph(ReflexionState)
     builder.add_node("init", ReflexionNodes.init)
     builder.add_node("re_init", ReflexionNodes.re_init)
@@ -240,9 +243,14 @@ def create_reflexion_graph(
             "no": END,
         },
     )
+
+    # TODO: ugly hack to allow creating a png for reflexion graph
+    edge_condition = partial(ReflexionEdges.should_continue_num_iterations, max_num_iterations=max_num_iterations)
+    edge_condition.__name__ = edge_condition.func.__name__  # type: ignore[attr-defined]
+
     builder.add_conditional_edges(
         "self_reflect",
-        partial(ReflexionEdges.should_continue_num_iterations, max_num_iterations=max_num_iterations),
+        edge_condition,
         {"yes": "re_init", "no": END},
     )
     builder.add_edge("re_init", "act")
