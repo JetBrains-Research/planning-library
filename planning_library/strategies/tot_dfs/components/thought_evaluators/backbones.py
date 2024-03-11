@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
@@ -16,8 +16,8 @@ class BaseThoughtEvaluatorBackbone(ABC):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
-        observation: Optional[Union[List[AgentStep], AgentStep]],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
+        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         ...
@@ -27,8 +27,8 @@ class BaseThoughtEvaluatorBackbone(ABC):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
-        observation: Optional[Union[List[AgentStep], AgentStep]],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
+        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         ...
@@ -44,8 +44,8 @@ class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
-        observation: Optional[Union[List[AgentStep], AgentStep]],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
+        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         return self.runnable.invoke(
@@ -57,8 +57,8 @@ class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
-        observation: Optional[Union[List[AgentStep], AgentStep]],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
+        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         result = await self.runnable.ainvoke(

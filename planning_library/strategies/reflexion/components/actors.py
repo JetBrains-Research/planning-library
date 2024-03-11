@@ -1,10 +1,9 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Sequence, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.callbacks import CallbackManager
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt.tool_executor import ToolExecutor  # type: ignore[import]
 

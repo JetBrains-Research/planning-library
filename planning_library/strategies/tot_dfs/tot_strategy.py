@@ -75,11 +75,11 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
 
     def _perform_thought_actions(
         self,
-        thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        thought: List[AgentAction] | AgentAction | AgentFinish,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> Optional[Union[List[AgentStep], AgentStep]]:
+    ) -> Optional[List[AgentStep] | AgentStep]:
         """Performs actions proposed as a thought.
 
         Args:
@@ -120,11 +120,11 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
 
     async def _aperform_thought_actions(
         self,
-        thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        thought: List[AgentAction] | AgentAction | AgentFinish,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> Optional[Union[List[AgentStep], AgentStep]]:
+    ) -> Optional[List[AgentStep] | AgentStep]:
         """Performs actions proposed as a thought asynchronously.
 
         Args:
@@ -174,9 +174,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> Iterator[
-        Tuple[Union[List[AgentAction], AgentAction, AgentFinish], Optional[Union[List[AgentStep], AgentStep]]]
-    ]:
+    ) -> Iterator[Tuple[List[AgentAction] | AgentAction | AgentFinish, Optional[List[AgentStep] | AgentStep]]]:
         """Performs a single step of DFS algorithm.
 
         Args:
@@ -292,9 +290,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> AsyncIterator[
-        Tuple[Union[List[AgentAction], AgentAction, AgentFinish], Optional[Union[List[AgentStep], AgentStep]]]
-    ]:
+    ) -> AsyncIterator[Tuple[List[AgentAction] | AgentAction | AgentFinish, Optional[List[AgentStep] | AgentStep]]]:
         """Performs a single step of DFS algorithm asynchronously.
 
         Args:

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
@@ -14,7 +14,7 @@ class BaseThoughtEvaluatorContinueJudge(ABC):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: Any,
         run_manager: Optional[CallbackManager],
     ) -> bool:
@@ -25,7 +25,7 @@ class BaseThoughtEvaluatorContinueJudge(ABC):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: Any,
         run_manager: Optional[AsyncCallbackManager],
     ) -> bool:
@@ -44,7 +44,7 @@ class ThresholdThoughtEvaluatorContinueJudge(BaseThoughtEvaluatorContinueJudge):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: float,
         run_manager: Optional[CallbackManager],
     ) -> bool:
@@ -54,7 +54,7 @@ class ThresholdThoughtEvaluatorContinueJudge(BaseThoughtEvaluatorContinueJudge):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        next_thought: Union[List[AgentAction], AgentAction, AgentFinish],
+        next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: float,
         run_manager: Optional[AsyncCallbackManager],
     ) -> bool:
