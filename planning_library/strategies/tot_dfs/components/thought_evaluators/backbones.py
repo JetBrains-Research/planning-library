@@ -17,7 +17,6 @@ class BaseThoughtEvaluatorBackbone(ABC):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         ...
@@ -28,7 +27,6 @@ class BaseThoughtEvaluatorBackbone(ABC):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         ...
@@ -45,11 +43,10 @@ class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         return self.runnable.invoke(
-            {"inputs": inputs, "trajectory": trajectory, "next_thought": next_thought, "observation": observation},
+            {"inputs": inputs, "trajectory": trajectory, "next_thought": next_thought},
             {"callbacks": run_manager} if run_manager else {},
         )
 
@@ -58,11 +55,10 @@ class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Any:
         result = await self.runnable.ainvoke(
-            {"inputs": inputs, "trajectory": trajectory, "next_thought": next_thought, "observation": observation},
+            {"inputs": inputs, "trajectory": trajectory, "next_thought": next_thought},
             {"callbacks": run_manager} if run_manager else {},
         )
         return result

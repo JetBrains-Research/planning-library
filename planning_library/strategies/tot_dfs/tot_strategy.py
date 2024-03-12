@@ -1,4 +1,3 @@
-import asyncio
 from collections import deque
 from typing import AsyncIterator, Deque, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
@@ -8,7 +7,7 @@ from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackMa
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 
-from ...utils import aperform_agent_action, perform_agent_action
+from ...action_executors import BaseActionExecutor, DefaultActionExecutor
 from ..base_strategy import BaseCustomStrategy
 from .components import BaseThoughtGenerator, BaseThoughtSorter, ThoughtEvaluator
 from .components.thought_evaluators import RunnableThoughtEvaluator, ThresholdThoughtEvaluatorContinueJudge
@@ -36,6 +35,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     def create(
         agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
         tools: Sequence[BaseTool],
+        action_executor: BaseActionExecutor = DefaultActionExecutor(),
         evaluator_runnable: Optional[Runnable] = None,
         value_threshold: float = 0.5,
         max_thoughts: int = 3,
@@ -70,125 +70,28 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             ),
             max_thoughts=max_thoughts,
             max_iterations=max_iterations,
+            action_executor=action_executor,
         )
         return strategy
-
-    def _perform_thought_actions(
-        self,
-        thought: List[AgentAction] | AgentAction | AgentFinish,
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
-        run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> Optional[List[AgentStep] | AgentStep]:
-        """Performs actions proposed as a thought.
-
-        Args:
-            thought: Actions proposed as a thought. Can be: multi-action, single action, finishing.
-            name_to_tool_map: Mapping from tool names to actual tools, used for calling tools based on agent's output.
-            color_mapping: Mapping from tool names to colors, used for logging purposes when calling tools.
-            run_manager: Callback for the current run.
-
-        Returns:
-              * List[AgentStep] - for multi-action thoughts (List[AgentAction])
-              * AgentStep - for single-action thoughts (AgentAction)
-              * None - for finishing thoughts (AgentFinish)
-        """
-        if isinstance(thought, AgentAction):
-            tool_result = perform_agent_action(
-                agent_action=thought,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
-                verbose=self.verbose,
-                tool_run_kwargs=self.agent.tool_run_logging_kwargs(),
-                run_manager=run_manager,
-            )
-            return tool_result
-        elif isinstance(thought, list):
-            observations = []
-            for action in thought:
-                tool_result = perform_agent_action(
-                    agent_action=action,
-                    name_to_tool_map=name_to_tool_map,
-                    color_mapping=color_mapping,
-                    verbose=self.verbose,
-                    tool_run_kwargs=self.agent.tool_run_logging_kwargs(),
-                    run_manager=run_manager,
-                )
-                observations.append(tool_result)
-            return observations
-        return None
-
-    async def _aperform_thought_actions(
-        self,
-        thought: List[AgentAction] | AgentAction | AgentFinish,
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
-        run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> Optional[List[AgentStep] | AgentStep]:
-        """Performs actions proposed as a thought asynchronously.
-
-        Args:
-            thought: Actions proposed as a thought. Can be: multi-action, single action, finishing.
-            name_to_tool_map: Mapping from tool names to actual tools, used for calling tools based on agent's output.
-            color_mapping: Mapping from tool names to colors, used for logging purposes when calling tools.
-            run_manager: Callback for the current run.
-
-        Returns:
-              * List[AgentStep] - for multi-action thoughts (List[AgentAction])
-              * AgentStep - for single-action thoughts (AgentAction)
-              * None - for finishing thoughts (AgentFinish)
-        """
-        if isinstance(thought, AgentAction):
-            tool_result = await aperform_agent_action(
-                agent_action=thought,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
-                verbose=self.verbose,
-                tool_run_kwargs=self.agent.tool_run_logging_kwargs(),
-                run_manager=run_manager,
-            )
-            return tool_result
-        elif isinstance(thought, list):
-            # TODO: no idea why mypy complains
-            with asyncio.TaskGroup() as tg:  # type: ignore[attr-defined]
-                tool_results = [
-                    tg.create_task(
-                        aperform_agent_action(
-                            agent_action=action,
-                            name_to_tool_map=name_to_tool_map,
-                            color_mapping=color_mapping,
-                            verbose=self.verbose,
-                            tool_run_kwargs=self.agent.tool_run_logging_kwargs(),
-                            run_manager=run_manager,
-                        )
-                    )
-                    for action in thought
-                ]
-            return [task.result() for task in tool_results]
-        return None
 
     def _dfs_step(
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> Iterator[Tuple[List[AgentAction] | AgentAction | AgentFinish, Optional[List[AgentStep] | AgentStep]]]:
+    ) -> Iterator[List[AgentAction] | AgentAction | AgentFinish]:
         """Performs a single step of DFS algorithm.
 
         Args:
             inputs: Agent inputs.
             trajectory: Current trajectory – path from the root node to the current node. Essentially, intermediate steps before the current DFS step.
-            name_to_tool_map: Mapping from tool names to actual tools, used for calling tools based on agent's output.
-            color_mapping: Mapping from tool names to colors, used for logging purposes when calling tools.
             run_manager: Callback for the current run.
 
         Returns:
-            Iterator over tuples with three options possible:
-              * tuple (List[AgentAction], List[AgentStep]) - for multi-action thoughts
-              * tuple (AgentAction, AgentStep) - for single-action thoughts
-              * tuple (AgentFinish, None) - for finishing thoughts
+            Iterator over promising thoughts for the current step with three options possible:
+              * List[AgentAction] - for multi-action thoughts
+              * AgentAction - for single-action thoughts
+              * AgentFinish - for finishing thoughts / thoughts without tool calls
         """
 
         # 1: generate k possible next steps
@@ -211,28 +114,17 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             )
 
         for cur_thought in thoughts:
-            # 3: do actions
-            if isinstance(cur_thought, AgentFinish):
-                observation = None
-            else:
-                observation = self._perform_thought_actions(
-                    thought=cur_thought,
-                    name_to_tool_map=name_to_tool_map,
-                    color_mapping=color_mapping,
-                    run_manager=run_manager,
-                )
-            # 4: evaluate each thought
+            # 3: evaluate each thought
             cur_thought_should_continue = self.thought_evaluator.evaluate(
                 inputs=inputs,
                 trajectory=trajectory,
                 next_thought=cur_thought,
-                observation=observation,
                 run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
             )
 
-            # 5: proceed only with thoughts with value above a certain threshold
+            # 4: proceed only with thoughts with value above a certain threshold
             if cur_thought_should_continue:
-                yield cur_thought, observation
+                yield cur_thought
 
     def _run_strategy(
         self,
@@ -263,13 +155,29 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         while frontier and cur_step < self.max_iterations:
             cur_node = frontier.pop()
 
-            for new_thought, observation in self._dfs_step(
+            # TODO: traverses from the tree root to the cur_node on each call. how to optimize?
+            trajectory = cur_node.trajectory
+
+            for new_thought in self._dfs_step(
                 inputs=inputs,
-                trajectory=cur_node.trajectory,
+                trajectory=trajectory,
                 run_manager=run_manager,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
             ):
+                # actually do action(s)
+                if isinstance(new_thought, AgentFinish):
+                    observation = None
+                else:
+                    observation = self.action_executor.execute(
+                        actions=new_thought,
+                        name_to_tool_map=name_to_tool_map,
+                        color_mapping=color_mapping,
+                        run_manager=run_manager,
+                        verbose=self.verbose,
+                        tool_run_logging_kwargs=self.agent.tool_run_logging_kwargs(),
+                        reset_before_action=True,
+                        reset_kwargs={"trajectory": trajectory},
+                    )
+
                 new_node = ToTNode(parent=cur_node, thought=new_thought, observation=observation)
                 cur_node.children.append(new_node)
                 if isinstance(new_thought, AgentFinish):
@@ -287,10 +195,8 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         self,
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> AsyncIterator[Tuple[List[AgentAction] | AgentAction | AgentFinish, Optional[List[AgentStep] | AgentStep]]]:
+    ) -> AsyncIterator[List[AgentAction] | AgentAction | AgentFinish]:
         """Performs a single step of DFS algorithm asynchronously.
 
         Args:
@@ -301,10 +207,10 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             run_manager: Callback for the current run.
 
         Returns:
-            Iterator over tuples with three options possible:
-              * tuple (List[AgentAction], List[AgentStep]) - for multi-action thoughts
-              * tuple (AgentAction, AgentStep) - for single-action thoughts
-              * tuple (AgentFinish, None) - for finishing thoughts
+            Iterator over promising thoughts for the current step with three options possible:
+              * List[AgentAction] - for multi-action thoughts
+              * AgentAction - for single-action thoughts
+              * AgentFinish - for finishing thoughts / thoughts without tool calls
         """
 
         # 1: generate k possible next steps
@@ -327,28 +233,17 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             )
 
         for cur_thought in thoughts:
-            # 3: do actions
-            if isinstance(cur_thought, AgentFinish):
-                observation = None
-            else:
-                observation = await self._aperform_thought_actions(
-                    thought=cur_thought,
-                    name_to_tool_map=name_to_tool_map,
-                    color_mapping=color_mapping,
-                    run_manager=run_manager,
-                )
-            # 4: evaluate each thought
+            # 3: evaluate each thought
             cur_thought_should_continue = await self.thought_evaluator.aevaluate(
                 inputs=inputs,
                 trajectory=trajectory,
                 next_thought=cur_thought,
-                observation=observation,
                 run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
             )
 
-            # 5: proceed only with thoughts with value above a certain threshold
+            # 4: proceed only with thoughts with value above a certain threshold
             if cur_thought_should_continue:
-                yield cur_thought, observation
+                yield cur_thought
 
     async def _arun_strategy(
         self,
@@ -379,13 +274,29 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         while frontier and cur_step < self.max_iterations:
             cur_node = frontier.pop()
 
-            async for new_thought, observation in self._adfs_step(
+            # TODO: traverses from the tree root to the cur_node on each call. how to optimize?
+            trajectory = cur_node.trajectory
+
+            async for new_thought in self._adfs_step(
                 inputs=inputs,
-                trajectory=cur_node.trajectory,
+                trajectory=trajectory,
                 run_manager=run_manager,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
             ):
+                # actually do action(s)
+                if isinstance(new_thought, AgentFinish):
+                    observation = None
+                else:
+                    observation = await self.action_executor.aexecute(
+                        actions=new_thought,
+                        name_to_tool_map=name_to_tool_map,
+                        color_mapping=color_mapping,
+                        run_manager=run_manager,
+                        verbose=self.verbose,
+                        tool_run_logging_kwargs=self.agent.tool_run_logging_kwargs(),
+                        reset_before_action=True,
+                        reset_kwargs={"trajectory": trajectory},
+                    )
+
                 new_node = ToTNode(parent=cur_node, thought=new_thought, observation=observation)
                 cur_node.children.append(new_node)
                 if isinstance(new_thought, AgentFinish):

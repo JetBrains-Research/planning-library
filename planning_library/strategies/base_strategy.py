@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple, Union, overload
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
@@ -12,10 +12,13 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
+from planning_library.action_executors import BaseActionExecutor, DefaultActionExecutor
+
 
 class BaseCustomStrategy(Chain, ABC):
     agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]
     tools: Sequence[BaseTool]
+    action_executor: BaseActionExecutor = DefaultActionExecutor()
     return_intermediate_steps: bool = False
     max_iterations: int = 15
     verbose: bool = True

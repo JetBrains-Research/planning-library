@@ -24,14 +24,12 @@ class ThoughtEvaluator:
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[CallbackManager] = None,
     ) -> bool:
         value = self.backbone.evaluate(
             inputs=inputs,
             trajectory=trajectory,
             next_thought=next_thought,
-            observation=observation,
             run_manager=run_manager,
         )
         should_continue = self.judge.should_continue(
@@ -44,14 +42,12 @@ class ThoughtEvaluator:
         inputs: Dict[str, str],
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
-        observation: Optional[List[AgentStep] | AgentStep],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> bool:
         value = await self.backbone.aevaluate(
             inputs=inputs,
             trajectory=trajectory,
             next_thought=next_thought,
-            observation=observation,
             run_manager=run_manager,
         )
         should_continue = await self.judge.ashould_continue(
