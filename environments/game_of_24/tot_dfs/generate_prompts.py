@@ -21,8 +21,12 @@ generate_sample_openai_tools_prompt = ChatPromptTemplate.from_messages(
         MessagesPlaceholder("agent_scratchpad"),
         (
             "human",
-            "You might have already made some suggestions for the current state - if you did, you will find them below. Don't repeat yourself.",
+            "You might have already made some suggestions for the current state - if you did, you will find them below.",
         ),
         MessagesPlaceholder("previous_thoughts"),
+        (
+            "human",
+            "Please, remember to suggest exactly ONE (1) tool call, no more and no less, different from your previous suggestions. Remember to only use given numbers.",
+        ),
     ]
 )
