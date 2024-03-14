@@ -9,10 +9,10 @@ from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackMa
 from langchain_core.pydantic_v1 import root_validator
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
-from langchain_core.utils.input import get_color_mapping
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from planning_library.action_executors import BaseActionExecutor, DefaultActionExecutor
+from planning_library.utils.actions_utils import get_tools_maps
 
 
 class BaseCustomStrategy(Chain, ABC):
@@ -138,10 +138,7 @@ class BaseCustomStrategy(Chain, ABC):
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
         """Run text through and get agent response."""
-        # Construct a mapping of tool name to tool for easy lookup
-        name_to_tool_map = {tool.name: tool for tool in self.tools}
-        # We construct a mapping from each tool to a color, used for logging.
-        color_mapping = get_color_mapping([tool.name for tool in self.tools], excluded_colors=["green", "red"])
+        name_to_tool_map, color_mapping = get_tools_maps(self.tools)
 
         outputs = [
             self._return(output, intermediate_steps, run_manager=run_manager)
@@ -161,10 +158,7 @@ class BaseCustomStrategy(Chain, ABC):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
         """Run text through and get agent response."""
-        # Construct a mapping of tool name to tool for easy lookup
-        name_to_tool_map = {tool.name: tool for tool in self.tools}
-        # We construct a mapping from each tool to a color, used for logging.
-        color_mapping = get_color_mapping([tool.name for tool in self.tools], excluded_colors=["green"])
+        name_to_tool_map, color_mapping = get_tools_maps(self.tools)
 
         _outputs = self._arun_strategy(
             name_to_tool_map=name_to_tool_map,

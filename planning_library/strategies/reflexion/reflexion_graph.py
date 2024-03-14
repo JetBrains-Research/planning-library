@@ -1,11 +1,14 @@
 from functools import partial
-from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, TypedDict, Union
 
-from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.runnables import RunnableLambda
+from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
+from ...action_executors import BaseActionExecutor
+from ...utils import get_tools_maps
 from .components.actors import BaseActor
 from .components.evaluators import ReflexionEvaluator
 from .components.self_reflections import BaseSelfReflection
@@ -36,13 +39,17 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def re_init(state: ReflexionState) -> ReflexionState:
+    def re_init(state: ReflexionState, reset_environment: Optional[Callable[[Dict[str, Any]], None]]) -> ReflexionState:
         """The first node that gets called after at least one iteration. Handles the advance of the loop interation correctly."""
         state["agent_outcome"] = None
         state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
         state["intermediate_steps"] = []
         state["iteration"] += 1
+
+        if reset_environment:
+            reset_environment(state["inputs"])
+
         return state
 
     @staticmethod
@@ -69,34 +76,49 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def execute_tools(state: ReflexionState, actor: BaseActor) -> ReflexionState:
-        """Synchronous version of executing tools as previously requested by an agent."""
+    def execute_actions(
+        state: ReflexionState,
+        action_executor: BaseActionExecutor,
+        name_to_tool_map: Dict[str, BaseTool],
+        color_mapping: Dict[str, str],
+    ) -> ReflexionState:
+        """Synchronous version of executing actions as previously requested by an agent."""
         assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
 
-        observation = actor.execute_tools(action=state["agent_outcome"])
-        if not isinstance(observation, list):
-            observation = [observation]
+        observation = action_executor.execute(
+            actions=state["agent_outcome"], name_to_tool_map=name_to_tool_map, color_mapping=color_mapping
+        )
 
-        state["intermediate_steps"].extend(observation)
+        if isinstance(observation, AgentStep):
+            state["intermediate_steps"].append((observation.action, observation.observation))
+        else:
+            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
         return state
 
     @staticmethod
-    async def aexecute_tools(state: ReflexionState, actor: BaseActor) -> ReflexionState:
+    async def aexecute_actions(
+        state: ReflexionState,
+        action_executor: BaseActionExecutor,
+        name_to_tool_map: Dict[str, BaseTool],
+        color_mapping: Dict[str, str],
+    ) -> ReflexionState:
         """Asynchronous version of executing tools as previously requested by an agent."""
         assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
 
-        observation = await actor.aexecute_tools(action=state["agent_outcome"])
+        observation = await action_executor.aexecute(
+            actions=state["agent_outcome"], name_to_tool_map=name_to_tool_map, color_mapping=color_mapping
+        )
 
-        if not isinstance(observation, list):
-            observation = [observation]
-
-        state["intermediate_steps"].extend(observation)
+        if isinstance(observation, AgentStep):
+            state["intermediate_steps"].append((observation.action, observation.observation))
+        else:
+            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
         return state
 
     @staticmethod
@@ -197,20 +219,39 @@ def create_reflexion_graph(
     actor: BaseActor,
     evaluator: ReflexionEvaluator,
     self_reflection: BaseSelfReflection,
+    action_executor: BaseActionExecutor,
+    tools: Sequence[BaseTool],
     max_iterations: Optional[int],
+    reset_environment: Optional[Callable[[Dict[str, Any]], None]],
 ) -> Pregel:
     """Builds a graph for Reflexion strategy."""
+
     builder = StateGraph(ReflexionState)
     builder.add_node("init", ReflexionNodes.init)
-    builder.add_node("re_init", ReflexionNodes.re_init)
+    builder.add_node(
+        "re_init",
+        partial(ReflexionNodes.re_init, reset_environment=reset_environment),
+    )
     builder.add_node(
         "act", RunnableLambda(partial(ReflexionNodes.act, actor=actor), afunc=partial(ReflexionNodes.aact, actor=actor))
     )
+
+    name_to_tool_map, color_mapping = get_tools_maps(tools)
     builder.add_node(
-        "execute_tools",
+        "execute_actions",
         RunnableLambda(
-            partial(ReflexionNodes.execute_tools, actor=actor),
-            afunc=partial(ReflexionNodes.aexecute_tools, actor=actor),
+            partial(
+                ReflexionNodes.execute_actions,
+                action_executor=action_executor,
+                name_to_tool_map=name_to_tool_map,
+                color_mapping=color_mapping,
+            ),
+            afunc=partial(
+                ReflexionNodes.aexecute_actions,
+                action_executor=action_executor,
+                name_to_tool_map=name_to_tool_map,
+                color_mapping=color_mapping,
+            ),
         ),
     )
     builder.add_node(
@@ -232,9 +273,9 @@ def create_reflexion_graph(
     builder.add_edge("init", "act")
 
     builder.add_conditional_edges(
-        "act", ReflexionEdges.should_continue_actor, {"yes": "execute_tools", "no": "evaluate"}
+        "act", ReflexionEdges.should_continue_actor, {"yes": "execute_actions", "no": "evaluate"}
     )
-    builder.add_edge("execute_tools", "act")
+    builder.add_edge("execute_actions", "act")
     builder.add_conditional_edges(
         "evaluate",
         ReflexionEdges.should_continue_evaluator,
@@ -245,7 +286,7 @@ def create_reflexion_graph(
     )
     builder.add_conditional_edges(
         "self_reflect",
-        partial(ReflexionEdges.should_continue_num_iterations, max_num_iterations=max_iterations),
+        partial(ReflexionEdges.should_continue_num_iterations, max_iterations=max_iterations),
         {"yes": "re_init", "no": END},
     )
     builder.add_edge("re_init", "act")

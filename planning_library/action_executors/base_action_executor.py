@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, overload
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
@@ -13,8 +13,8 @@ class BaseActionExecutor(ABC):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep]:
@@ -26,8 +26,8 @@ class BaseActionExecutor(ABC):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> AgentStep:
@@ -39,8 +39,8 @@ class BaseActionExecutor(ABC):
         actions: List[AgentAction] | AgentAction | AgentFinish,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
@@ -65,8 +65,8 @@ class BaseActionExecutor(ABC):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep]:
@@ -78,8 +78,8 @@ class BaseActionExecutor(ABC):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> AgentStep:
@@ -91,8 +91,8 @@ class BaseActionExecutor(ABC):
         actions: List[AgentAction] | AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:

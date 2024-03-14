@@ -1,10 +1,11 @@
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
+from ...action_executors import BaseActionExecutor, DefaultActionExecutor
 from ...utils import convert_runnable_to_agent
 from ..base_strategy import BaseLangGraphStrategy
 from .components.actors import AgentActor
@@ -27,10 +28,12 @@ class ReflexionStrategy(BaseLangGraphStrategy):
     def create(
         agent: Runnable,
         tools: Sequence[BaseTool],
+        action_executor: BaseActionExecutor = DefaultActionExecutor(),
         evaluator_runnable: Optional[Runnable[ReflexionEvaluatorInput, Any]] = None,
         self_reflection_runnable: Optional[Runnable[Dict[str, Any], Any]] = None,
         max_iterations: Optional[int] = None,
         value_threshold: Optional[float] = None,
+        reset_environment: Optional[Callable[[Dict[str, Any]], None]] = None,
         **kwargs,
     ) -> Pregel:
         """Creates an instance of Reflexion strategy.
@@ -43,14 +46,17 @@ class ReflexionStrategy(BaseLangGraphStrategy):
         Args:
             agent: The agent to run for proposing thoughts at each DFS step.
             tools: The valid tools the agent can call.
+            action_executor: The class responsible for actually executing actions. By default, simply calls LangChain tools.
             evaluator_runnable: Runnable that powers an evaluator. If None, the default model will be used.
             self_reflection_runnable: Runnable that powers self-reflection. If None, the default model will be used.
-            value_threshold: Threshold for evaluator; only thoughts evaluated higher than the threshold will be further explored.
             max_iterations: Maximum number of iterations. If None, no restrictions on the number of iterations are imposed.
+            value_threshold: Threshold for evaluator; only thoughts evaluated higher than the threshold will be further explored.
+            reset_environment: If the agent operates in an environment, this function is responsible for resetting its
+             state between Reflexion iterations.
         """
         runnable_agent = convert_runnable_to_agent(agent)
 
-        actor = AgentActor(agent=runnable_agent, tools=tools)
+        actor = AgentActor(agent=runnable_agent)
 
         if evaluator_runnable is None:
             raise ValueError("Default evaluator is not provided yet.")
@@ -66,5 +72,11 @@ class ReflexionStrategy(BaseLangGraphStrategy):
         self_reflection = RunnableSelfReflection(self_reflection_runnable)
 
         return create_reflexion_graph(
-            actor=actor, evaluator=evaluator, self_reflection=self_reflection, max_iterations=max_iterations
+            actor=actor,
+            evaluator=evaluator,
+            self_reflection=self_reflection,
+            action_executor=action_executor,
+            tools=tools,
+            max_iterations=max_iterations,
+            reset_environment=reset_environment,
         )

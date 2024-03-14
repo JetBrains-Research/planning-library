@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, overload
 
 import gymnasium as gym
 from gymnasium.core import ObsType
@@ -19,8 +19,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         reset_env_before_action: bool = False,
         **reset_kwargs,
@@ -33,8 +33,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         reset_env_before_action: bool = False,
         **reset_kwargs,
@@ -46,12 +46,14 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: List[AgentAction] | AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         reset_env_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep] | AgentStep:
+        tool_run_logging_kwargs = {} if tool_run_logging_kwargs is None else tool_run_logging_kwargs
+
         if reset_env_before_action:
             self._env.reset(options=reset_kwargs)
 
@@ -64,7 +66,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
             tool_manager = callback_manager.on_tool_start(
                 {"name": actions.tool, "description": actions.tool},
                 actions.tool_input if isinstance(actions.tool_input, str) else str(actions.tool_input),
-                color="green",
+                color=color_mapping[actions.tool],
                 name=actions.tool,
                 inputs=None if isinstance(actions.tool_input, str) else actions.tool_input,
                 **tool_run_logging_kwargs,
@@ -101,8 +103,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
@@ -115,8 +117,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
@@ -128,8 +130,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         actions: List[AgentAction] | AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         reset_before_action: bool = False,
         **reset_kwargs,

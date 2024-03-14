@@ -1,11 +1,11 @@
 import asyncio
-from typing import Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, overload
 
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
 from langchain_core.tools import BaseTool
 
-from ..utils.perform_action_custom import aperform_agent_action, perform_agent_action
+from ..utils.actions_utils import aperform_agent_action, perform_agent_action
 from .base_action_executor import BaseActionExecutor
 
 
@@ -16,8 +16,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep]:
@@ -29,8 +29,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> AgentStep:
@@ -41,8 +41,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: List[AgentAction] | AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
@@ -76,8 +76,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: List[AgentAction],
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep]:
@@ -89,8 +89,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> AgentStep:
@@ -101,8 +101,8 @@ class DefaultActionExecutor(BaseActionExecutor):
         actions: List[AgentAction] | AgentAction,
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
-        verbose: bool,
-        tool_run_logging_kwargs,
+        verbose: bool = True,
+        tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
