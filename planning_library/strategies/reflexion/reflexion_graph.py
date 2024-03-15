@@ -1,5 +1,16 @@
 from functools import partial
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, TypedDict, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+)
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.runnables import RunnableLambda
@@ -39,7 +50,10 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def re_init(state: ReflexionState, reset_environment: Optional[Callable[[Dict[str, Any]], None]]) -> ReflexionState:
+    def re_init(
+        state: ReflexionState,
+        reset_environment: Optional[Callable[[Dict[str, Any]], None]],
+    ) -> ReflexionState:
         """The first node that gets called after at least one iteration. Handles the advance of the loop interation correctly."""
         state["agent_outcome"] = None
         state["evaluator_score"] = None
@@ -83,19 +97,27 @@ class ReflexionNodes:
         color_mapping: Dict[str, str],
     ) -> ReflexionState:
         """Synchronous version of executing actions as previously requested by an agent."""
-        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
+        assert (
+            state["agent_outcome"] is not None
+        ), "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
 
         observation = action_executor.execute(
-            actions=state["agent_outcome"], name_to_tool_map=name_to_tool_map, color_mapping=color_mapping
+            actions=state["agent_outcome"],
+            name_to_tool_map=name_to_tool_map,
+            color_mapping=color_mapping,
         )
 
         if isinstance(observation, AgentStep):
-            state["intermediate_steps"].append((observation.action, observation.observation))
+            state["intermediate_steps"].append(
+                (observation.action, observation.observation)
+            )
         else:
-            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
+            state["intermediate_steps"].extend(
+                [(obs.action, obs.observation) for obs in observation]
+            )
         return state
 
     @staticmethod
@@ -106,50 +128,68 @@ class ReflexionNodes:
         color_mapping: Dict[str, str],
     ) -> ReflexionState:
         """Asynchronous version of executing tools as previously requested by an agent."""
-        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
+        assert (
+            state["agent_outcome"] is not None
+        ), "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
 
         observation = await action_executor.aexecute(
-            actions=state["agent_outcome"], name_to_tool_map=name_to_tool_map, color_mapping=color_mapping
+            actions=state["agent_outcome"],
+            name_to_tool_map=name_to_tool_map,
+            color_mapping=color_mapping,
         )
 
         if isinstance(observation, AgentStep):
-            state["intermediate_steps"].append((observation.action, observation.observation))
+            state["intermediate_steps"].append(
+                (observation.action, observation.observation)
+            )
         else:
-            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
+            state["intermediate_steps"].extend(
+                [(obs.action, obs.observation) for obs in observation]
+            )
         return state
 
     @staticmethod
-    def evaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
+    def evaluate(
+        state: ReflexionState, evaluator: ReflexionEvaluator
+    ) -> ReflexionState:
         """Synchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
         value, should_continue = evaluator.evaluate(
-            inputs=state["inputs"], intermediate_steps=state["intermediate_steps"], agent_outcome=state["agent_outcome"]
+            inputs=state["inputs"],
+            intermediate_steps=state["intermediate_steps"],
+            agent_outcome=state["agent_outcome"],
         )
         state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
     @staticmethod
-    async def aevaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
+    async def aevaluate(
+        state: ReflexionState, evaluator: ReflexionEvaluator
+    ) -> ReflexionState:
         """Asynchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
 
         value, should_continue = await evaluator.aevaluate(
-            inputs=state["inputs"], intermediate_steps=state["intermediate_steps"], agent_outcome=state["agent_outcome"]
+            inputs=state["inputs"],
+            intermediate_steps=state["intermediate_steps"],
+            agent_outcome=state["agent_outcome"],
         )
         state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
     @staticmethod
-    def self_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
+    def self_reflect(
+        state: ReflexionState, self_reflection: BaseSelfReflection
+    ) -> ReflexionState:
         """Synchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
@@ -165,7 +205,9 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    async def aself_reflect(state: ReflexionState, self_reflection: BaseSelfReflection) -> ReflexionState:
+    async def aself_reflect(
+        state: ReflexionState, self_reflection: BaseSelfReflection
+    ) -> ReflexionState:
         """Asynchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
@@ -233,7 +275,11 @@ def create_reflexion_graph(
         partial(ReflexionNodes.re_init, reset_environment=reset_environment),
     )
     builder.add_node(
-        "act", RunnableLambda(partial(ReflexionNodes.act, actor=actor), afunc=partial(ReflexionNodes.aact, actor=actor))
+        "act",
+        RunnableLambda(
+            partial(ReflexionNodes.act, actor=actor),
+            afunc=partial(ReflexionNodes.aact, actor=actor),
+        ),
     )
 
     name_to_tool_map, color_mapping = get_tools_maps(tools)
@@ -265,7 +311,9 @@ def create_reflexion_graph(
         "self_reflect",
         RunnableLambda(
             partial(ReflexionNodes.self_reflect, self_reflection=self_reflection),
-            afunc=partial(ReflexionNodes.aself_reflect, self_reflection=self_reflection),
+            afunc=partial(
+                ReflexionNodes.aself_reflect, self_reflection=self_reflection
+            ),
         ),
     )
 
@@ -273,7 +321,9 @@ def create_reflexion_graph(
     builder.add_edge("init", "act")
 
     builder.add_conditional_edges(
-        "act", ReflexionEdges.should_continue_actor, {"yes": "execute_actions", "no": "evaluate"}
+        "act",
+        ReflexionEdges.should_continue_actor,
+        {"yes": "execute_actions", "no": "evaluate"},
     )
     builder.add_edge("execute_actions", "act")
     builder.add_conditional_edges(
@@ -286,7 +336,9 @@ def create_reflexion_graph(
     )
     builder.add_conditional_edges(
         "self_reflect",
-        partial(ReflexionEdges.should_continue_num_iterations, max_iterations=max_iterations),
+        partial(
+            ReflexionEdges.should_continue_num_iterations, max_iterations=max_iterations
+        ),
         {"yes": "re_init", "no": END},
     )
     builder.add_edge("re_init", "act")

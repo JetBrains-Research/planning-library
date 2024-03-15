@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManager
@@ -8,7 +8,11 @@ from .continue_judges import ReflexionBaseEvaluatorContinueJudge
 
 
 class ReflexionEvaluator:
-    def __init__(self, backbone: ReflexionBaseEvaluatorBackbone, judge: ReflexionBaseEvaluatorContinueJudge):
+    def __init__(
+        self,
+        backbone: ReflexionBaseEvaluatorBackbone,
+        judge: ReflexionBaseEvaluatorContinueJudge,
+    ):
         self.backbone = backbone
         self.judge = judge
 

@@ -17,8 +17,7 @@ class ReflexionBaseEvaluatorContinueJudge(ABC):
         agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
         value: Any,
         run_manager: Optional[CallbackManager],
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     async def ashould_continue(
@@ -28,8 +27,7 @@ class ReflexionBaseEvaluatorContinueJudge(ABC):
         agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
         value: Any,
         run_manager: Optional[CallbackManager],
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
 
 class ReflexionThresholdEvaluatorContinueJudge(ReflexionBaseEvaluatorContinueJudge):

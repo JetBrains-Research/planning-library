@@ -1,11 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple, Union, overload
+from typing import (
+    Any,
+    AsyncIterator,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
 from langchain.chains.base import Chain
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.pydantic_v1 import root_validator
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
@@ -58,7 +71,10 @@ class BaseCustomStrategy(Chain, ABC):
         if isinstance(agent, BaseMultiActionAgent):
             for tool in tools:
                 if tool.return_direct:
-                    raise ValueError("Tools that have `return_direct=True` are not allowed " "in multi-action agents")
+                    raise ValueError(
+                        "Tools that have `return_direct=True` are not allowed "
+                        "in multi-action agents"
+                    )
         return values
 
     @root_validator(pre=True)
@@ -82,9 +98,10 @@ class BaseCustomStrategy(Chain, ABC):
     @staticmethod
     @abstractmethod
     def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent], tools: Sequence[BaseTool], **kwargs
-    ) -> "BaseCustomStrategy":
-        ...
+        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
+        tools: Sequence[BaseTool],
+        **kwargs,
+    ) -> "BaseCustomStrategy": ...
 
     @abstractmethod
     def _run_strategy(
@@ -93,8 +110,7 @@ class BaseCustomStrategy(Chain, ABC):
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
-    ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
-        ...
+    ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]: ...
 
     @abstractmethod
     def _arun_strategy(
@@ -103,8 +119,7 @@ class BaseCustomStrategy(Chain, ABC):
         name_to_tool_map: Dict[str, BaseTool],
         color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
-        ...
+    ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]: ...
 
     def _return(
         self,
@@ -126,7 +141,9 @@ class BaseCustomStrategy(Chain, ABC):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
         if run_manager:
-            await run_manager.on_agent_finish(output, color="green", verbose=self.verbose)
+            await run_manager.on_agent_finish(
+                output, color="green", verbose=self.verbose
+            )
         final_output = output.return_values
         if self.return_intermediate_steps:
             final_output["intermediate_steps"] = intermediate_steps
@@ -169,7 +186,9 @@ class BaseCustomStrategy(Chain, ABC):
 
         outputs = []
         async for _output, _intermediate_steps in _outputs:
-            output = await self._areturn(_output, _intermediate_steps, run_manager=run_manager)
+            output = await self._areturn(
+                _output, _intermediate_steps, run_manager=run_manager
+            )
             outputs.append(output)
 
         return {"outputs": outputs}
@@ -178,5 +197,4 @@ class BaseCustomStrategy(Chain, ABC):
 class BaseLangGraphStrategy(ABC):
     @staticmethod
     @abstractmethod
-    def create(agent: Runnable, tools: Sequence[BaseTool], **kwargs) -> Pregel:
-        ...
+    def create(agent: Runnable, tools: Sequence[BaseTool], **kwargs) -> Pregel: ...

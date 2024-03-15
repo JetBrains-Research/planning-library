@@ -18,8 +18,7 @@ class BaseEvaluatorBackbone(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManager] = None,
         **kwargs,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     async def aevaluate(
@@ -28,8 +27,7 @@ class BaseEvaluatorBackbone(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManager] = None,
         **kwargs,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 class RunnableEvaluator(BaseEvaluatorBackbone):
@@ -74,8 +72,7 @@ class ReflexionBaseEvaluatorBackbone(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
         run_manager: Optional[CallbackManager] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     async def aevaluate(
@@ -84,8 +81,7 @@ class ReflexionBaseEvaluatorBackbone(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: Union[List[AgentAction], AgentAction, AgentFinish],
         run_manager: Optional[CallbackManager] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 class ReflexionRunnableThoughtEvaluator(ReflexionBaseEvaluatorBackbone):
@@ -103,7 +99,10 @@ class ReflexionRunnableThoughtEvaluator(ReflexionBaseEvaluatorBackbone):
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         return self.evaluator.evaluate(
-            inputs=inputs, intermediate_steps=intermediate_steps, agent_outcome=agent_outcome, run_manager=run_manager
+            inputs=inputs,
+            intermediate_steps=intermediate_steps,
+            agent_outcome=agent_outcome,
+            run_manager=run_manager,
         )
 
     async def aevaluate(
@@ -114,5 +113,8 @@ class ReflexionRunnableThoughtEvaluator(ReflexionBaseEvaluatorBackbone):
         run_manager: Optional[CallbackManager] = None,
     ) -> Any:
         return await self.evaluator.aevaluate(
-            inputs=inputs, intermediate_steps=intermediate_steps, agent_outcome=agent_outcome, run_manager=run_manager
+            inputs=inputs,
+            intermediate_steps=intermediate_steps,
+            agent_outcome=agent_outcome,
+            run_manager=run_manager,
         )

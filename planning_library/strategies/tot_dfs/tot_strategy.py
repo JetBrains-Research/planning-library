@@ -1,16 +1,32 @@
 from collections import deque
-from typing import AsyncIterator, Deque, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import (
+    AsyncIterator,
+    Deque,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
-from langchain_core.agents import AgentAction, AgentFinish, AgentStep
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 
 from ...action_executors import BaseActionExecutor, DefaultActionExecutor
 from ..base_strategy import BaseCustomStrategy
 from .components import BaseThoughtGenerator, BaseThoughtSorter, ThoughtEvaluator
-from .components.thought_evaluators import RunnableThoughtEvaluator, ThresholdThoughtEvaluatorContinueJudge
+from .components.thought_evaluators import (
+    RunnableThoughtEvaluator,
+    ThresholdThoughtEvaluatorContinueJudge,
+)
 from .components.thought_generators import AgentThoughtGenerator
 from .utils import ToTNode
 
@@ -27,7 +43,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     thought_evaluator: ThoughtEvaluator
     max_thoughts: int
     thought_sorter: Optional[BaseThoughtSorter] = None
-    do_sorting: bool = False  # True for DFS (Tree of Thoughts), False for DFSDT (ToolLLM)
+    do_sorting: bool = (
+        False  # True for DFS (Tree of Thoughts), False for DFSDT (ToolLLM)
+    )
     root: Optional[ToTNode] = None
     terminals: List[ToTNode] = []
 
@@ -58,7 +76,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             max_iterations: Maximum number of iterations.
         """
         if evaluator_runnable is None:
-            raise ValueError("Default runnable for thought evaluator is not supported yet.")
+            raise ValueError(
+                "Default runnable for thought evaluator is not supported yet."
+            )
 
         strategy = TreeOfThoughtsDFSStrategy(
             agent=agent,
@@ -100,17 +120,23 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             inputs=inputs,
             trajectory=trajectory,
             max_num_thoughts=self.max_thoughts,
-            run_manager=run_manager.get_child(tag="generate_thoughts") if run_manager else None,
+            run_manager=run_manager.get_child(tag="generate_thoughts")
+            if run_manager
+            else None,
         )
 
         # 2: (optional) sort them
         if self.do_sorting:
-            assert self.thought_sorter is not None, "Sorting enabled, but thought sorter was not passed."
+            assert (
+                self.thought_sorter is not None
+            ), "Sorting enabled, but thought sorter was not passed."
             thoughts = self.thought_sorter.sort_thoughts(
                 thoughts=thoughts,
                 inputs=inputs,
                 trajectory=trajectory,
-                run_manager=run_manager.get_child(tag="sort_thoughts") if run_manager else None,
+                run_manager=run_manager.get_child(tag="sort_thoughts")
+                if run_manager
+                else None,
             )
 
         for cur_thought in thoughts:
@@ -119,7 +145,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 inputs=inputs,
                 trajectory=trajectory,
                 next_thought=cur_thought,
-                run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
+                run_manager=run_manager.get_child(tag="evaluate_thought")
+                if run_manager
+                else None,
             )
 
             # 4: proceed only with thoughts with value above a certain threshold
@@ -178,7 +206,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                         reset_kwargs={"trajectory": trajectory},
                     )
 
-                new_node = ToTNode(parent=cur_node, thought=new_thought, observation=observation)
+                new_node = ToTNode(
+                    parent=cur_node, thought=new_thought, observation=observation
+                )
                 cur_node.children.append(new_node)
                 if isinstance(new_thought, AgentFinish):
                     self.terminals.append(new_node)
@@ -188,7 +218,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             cur_step += 1
 
         for node in self.terminals:
-            assert isinstance(node.thought, AgentFinish), "Terminal nodes are expected to contain AgentFinish."
+            assert isinstance(
+                node.thought, AgentFinish
+            ), "Terminal nodes are expected to contain AgentFinish."
             yield node.thought, node.trajectory
 
     async def _adfs_step(
@@ -219,17 +251,23 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             inputs=inputs,
             trajectory=trajectory,
             max_num_thoughts=self.max_thoughts,
-            run_manager=run_manager.get_child(tag="generate_thoughts") if run_manager else None,
+            run_manager=run_manager.get_child(tag="generate_thoughts")
+            if run_manager
+            else None,
         )
 
         # 2: (optional) sort them
         if self.do_sorting:
-            assert self.thought_sorter is not None, "Sorting enabled, but thought sorter was not passed."
+            assert (
+                self.thought_sorter is not None
+            ), "Sorting enabled, but thought sorter was not passed."
             thoughts = await self.thought_sorter.asort_thoughts(
                 thoughts=thoughts,
                 inputs=inputs,
                 trajectory=trajectory,
-                run_manager=run_manager.get_child(tag="sort_thoughts") if run_manager else None,
+                run_manager=run_manager.get_child(tag="sort_thoughts")
+                if run_manager
+                else None,
             )
 
         for cur_thought in thoughts:
@@ -238,7 +276,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 inputs=inputs,
                 trajectory=trajectory,
                 next_thought=cur_thought,
-                run_manager=run_manager.get_child(tag="evaluate_thought") if run_manager else None,
+                run_manager=run_manager.get_child(tag="evaluate_thought")
+                if run_manager
+                else None,
             )
 
             # 4: proceed only with thoughts with value above a certain threshold
@@ -297,7 +337,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                         reset_kwargs={"trajectory": trajectory},
                     )
 
-                new_node = ToTNode(parent=cur_node, thought=new_thought, observation=observation)
+                new_node = ToTNode(
+                    parent=cur_node, thought=new_thought, observation=observation
+                )
                 cur_node.children.append(new_node)
                 if isinstance(new_thought, AgentFinish):
                     self.terminals.append(new_node)
@@ -307,5 +349,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
             cur_step += 1
 
         for node in self.terminals:
-            assert isinstance(node.thought, AgentFinish), "Terminal nodes are expected to contain AgentFinish."
+            assert isinstance(
+                node.thought, AgentFinish
+            ), "Terminal nodes are expected to contain AgentFinish."
             yield node.thought, node.trajectory

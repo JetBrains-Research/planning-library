@@ -13,8 +13,7 @@ class BaseSelfReflection(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: AgentFinish,
         evaluator_score: Any,
-    ) -> str:
-        ...
+    ) -> str: ...
 
     @abstractmethod
     async def aself_reflect(

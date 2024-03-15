@@ -2,14 +2,21 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 from langchain.agents.tools import InvalidTool
 from langchain_core.agents import AgentAction, AgentStep
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 
 
-def get_tools_maps(tools: Sequence[BaseTool]) -> Tuple[Dict[str, BaseTool], Dict[str, str]]:
+def get_tools_maps(
+    tools: Sequence[BaseTool],
+) -> Tuple[Dict[str, BaseTool], Dict[str, str]]:
     name_to_tool_map = {tool.name: tool for tool in tools}
-    color_mapping = get_color_mapping([tool.name for tool in tools], excluded_colors=["green"])
+    color_mapping = get_color_mapping(
+        [tool.name for tool in tools], excluded_colors=["green"]
+    )
     return name_to_tool_map, color_mapping
 
 
@@ -17,8 +24,8 @@ def perform_agent_action(
     agent_action: AgentAction,
     name_to_tool_map: Dict[str, BaseTool],
     color_mapping: Dict[str, str],
-    verbose: bool,
-    tool_run_kwargs: Optional[Dict[str, Any]],
+    verbose: bool = True,
+    tool_run_kwargs: Optional[Dict[str, Any]] = None,
     run_manager: Optional[CallbackManagerForChainRun] = None,
 ) -> AgentStep:
     """
@@ -63,8 +70,8 @@ async def aperform_agent_action(
     name_to_tool_map: Dict[str, BaseTool],
     color_mapping: Dict[str, str],
     agent_action: AgentAction,
-    verbose: bool,
-    tool_run_kwargs: Optional[Dict[str, Any]],
+    verbose: bool = True,
+    tool_run_kwargs: Optional[Dict[str, Any]] = None,
     run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
 ) -> AgentStep:
     """

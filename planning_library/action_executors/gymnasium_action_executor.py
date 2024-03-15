@@ -1,17 +1,28 @@
-from typing import Any, Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, Tuple, overload
 
 import gymnasium as gym
 from gymnasium.core import ObsType
 from langchain_core.agents import AgentAction, AgentStep
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManager, CallbackManagerForChainRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.tools import BaseTool
 
 from .base_action_executor import BaseActionExecutor
 
 
 class GymnasiumActionExecutor(BaseActionExecutor):
-    def __init__(self, env: gym.Env[ObsType, AgentAction]):
+    def __init__(
+        self,
+        env: gym.Env[
+            ObsType,
+            Tuple[AgentAction, Optional[CallbackManagerForChainRun], Dict[str, Any]],
+        ],
+        seed: Optional[int] = None,
+    ):
         self._env = env
+        self._seed = seed
 
     @overload
     def execute(
@@ -24,8 +35,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         run_manager: Optional[CallbackManagerForChainRun] = None,
         reset_env_before_action: bool = False,
         **reset_kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     def execute(
@@ -38,8 +48,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         run_manager: Optional[CallbackManagerForChainRun] = None,
         reset_env_before_action: bool = False,
         **reset_kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     def execute(
         self,
@@ -52,27 +61,18 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         reset_env_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep] | AgentStep:
-        tool_run_logging_kwargs = {} if tool_run_logging_kwargs is None else tool_run_logging_kwargs
+        tool_run_logging_kwargs = (
+            {} if tool_run_logging_kwargs is None else tool_run_logging_kwargs
+        )
 
         if reset_env_before_action:
-            self._env.reset(options=reset_kwargs)
+            self._env.reset(seed=self._seed, options=reset_kwargs)
 
         if isinstance(actions, AgentAction):
-            callback_manager = CallbackManager.configure(
-                inheritable_callbacks=run_manager.get_child(tag="tool_call") if run_manager else None,
-                verbose=verbose,
-                **tool_run_logging_kwargs,
+            observation, reward, terminated, truncated, info = self._env.step(
+                (actions, run_manager, tool_run_logging_kwargs)
             )
-            tool_manager = callback_manager.on_tool_start(
-                {"name": actions.tool, "description": actions.tool},
-                actions.tool_input if isinstance(actions.tool_input, str) else str(actions.tool_input),
-                color=color_mapping[actions.tool],
-                name=actions.tool,
-                inputs=None if isinstance(actions.tool_input, str) else actions.tool_input,
-                **tool_run_logging_kwargs,
-            )
-            observation, reward, terminated, truncated, info = self._env.step(actions)
-            tool_manager.on_tool_end(str(observation), color="red", name=actions.tool, **tool_run_logging_kwargs)
+
             return AgentStep(
                 action=actions,
                 observation={
@@ -108,8 +108,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     async def aexecute(
@@ -122,8 +121,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     async def aexecute(
         self,

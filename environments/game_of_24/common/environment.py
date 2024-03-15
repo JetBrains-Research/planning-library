@@ -24,7 +24,9 @@ class GameOf24(gym.Env[str, AgentAction]):
                 self.numbers[number] += 1
 
     def __str__(self):
-        return " ".join([str(key) for key, value in self.numbers.items() for _ in range(value)])
+        return " ".join(
+            [str(key) for key, value in self.numbers.items() for _ in range(value)]
+        )
 
     def _add_number(self, number: float) -> None:
         self.numbers[number] += 1
@@ -48,11 +50,22 @@ class GameOf24(gym.Env[str, AgentAction]):
             and self.numbers[number2] >= 1
         )
 
-    def step(self, action: AgentAction) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        observation, reward, terminated, truncated, info = None, 0, False, False, {"numbers": str(self)}
+    def step(
+        self, action: AgentAction
+    ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
+        observation, reward, terminated, truncated, info = (
+            None,
+            0,
+            False,
+            False,
+            {"numbers": str(self)},
+        )
 
         assert isinstance(action.tool_input, dict)
-        number1, number2 = float(action.tool_input["number1"]), float(action.tool_input["number2"])
+        number1, number2 = (
+            float(action.tool_input["number1"]),
+            float(action.tool_input["number2"]),
+        )
 
         if not self._verify_arguments(number1=number1, number2=number2):
             observation = "Wrong arguments: not all numbers given as arguments to a tool call are available."

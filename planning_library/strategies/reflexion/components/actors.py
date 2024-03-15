@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Sequence, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish
-from langgraph.prebuilt.tool_executor import ToolExecutor  # type: ignore[import]
 
 
 class BaseActor(ABC):
@@ -14,8 +13,7 @@ class BaseActor(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         self_reflections: Sequence[str],
         **kwargs,
-    ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
-        ...
+    ) -> Union[List[AgentAction], AgentAction, AgentFinish]: ...
 
     @abstractmethod
     async def aact(
@@ -24,8 +22,7 @@ class BaseActor(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         self_reflections: Sequence[str],
         **kwargs,
-    ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
-        ...
+    ) -> Union[List[AgentAction], AgentAction, AgentFinish]: ...
 
 
 class AgentActor(BaseActor):
@@ -39,7 +36,11 @@ class AgentActor(BaseActor):
         self_reflections: Sequence[str],
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
-        return self.agent.plan(intermediate_steps=intermediate_steps, **inputs, self_reflections=self_reflections)
+        return self.agent.plan(
+            intermediate_steps=intermediate_steps,
+            **inputs,
+            self_reflections=self_reflections,
+        )
 
     async def aact(
         self,
@@ -49,5 +50,7 @@ class AgentActor(BaseActor):
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
         return await self.agent.aplan(
-            intermediate_steps=intermediate_steps, **inputs, self_reflections=self_reflections
+            intermediate_steps=intermediate_steps,
+            **inputs,
+            self_reflections=self_reflections,
         )

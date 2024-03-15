@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_core.agents import AgentAction, AgentFinish, AgentStep
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.runnables import Runnable
 
@@ -18,8 +18,7 @@ class BaseThoughtEvaluatorBackbone(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
         run_manager: Optional[CallbackManager] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     async def aevaluate(
@@ -28,8 +27,7 @@ class BaseThoughtEvaluatorBackbone(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 class RunnableThoughtEvaluator(BaseThoughtEvaluatorBackbone):

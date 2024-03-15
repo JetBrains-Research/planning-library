@@ -5,7 +5,9 @@ from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.runnables import Runnable
 
 
-def convert_runnable_to_agent(agent: Runnable) -> Union[RunnableAgent, RunnableMultiActionAgent]:
+def convert_runnable_to_agent(
+    agent: Runnable,
+) -> Union[RunnableAgent, RunnableMultiActionAgent]:
     """Convert runnable to agent if passed in.
 
     Copied from langchain.agents.agent.AgentExecutor.validate_runnable_agent.

@@ -2,7 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, overload
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.tools import BaseTool
 
 
@@ -17,8 +20,7 @@ class BaseActionExecutor(ABC):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     def execute(
@@ -30,8 +32,7 @@ class BaseActionExecutor(ABC):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     @abstractmethod
     def execute(
@@ -69,8 +70,7 @@ class BaseActionExecutor(ABC):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     async def aexecute(
@@ -82,8 +82,7 @@ class BaseActionExecutor(ABC):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     @abstractmethod
     async def aexecute(

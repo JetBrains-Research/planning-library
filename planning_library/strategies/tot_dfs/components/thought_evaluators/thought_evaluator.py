@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 
-from langchain_core.agents import AgentAction, AgentFinish, AgentStep
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 
 from .backbones import BaseThoughtEvaluatorBackbone
@@ -15,7 +15,11 @@ class ThoughtEvaluator:
     * determining based on the value if the thought should be explored further or discarded.
     """
 
-    def __init__(self, backbone: BaseThoughtEvaluatorBackbone, judge: BaseThoughtEvaluatorContinueJudge):
+    def __init__(
+        self,
+        backbone: BaseThoughtEvaluatorBackbone,
+        judge: BaseThoughtEvaluatorContinueJudge,
+    ):
         self.backbone = backbone
         self.judge = judge
 
@@ -33,7 +37,11 @@ class ThoughtEvaluator:
             run_manager=run_manager,
         )
         should_continue = self.judge.should_continue(
-            inputs=inputs, trajectory=trajectory, next_thought=next_thought, run_manager=run_manager, value=value
+            inputs=inputs,
+            trajectory=trajectory,
+            next_thought=next_thought,
+            run_manager=run_manager,
+            value=value,
         )
         return should_continue
 
@@ -51,6 +59,10 @@ class ThoughtEvaluator:
             run_manager=run_manager,
         )
         should_continue = await self.judge.ashould_continue(
-            inputs=inputs, trajectory=trajectory, next_thought=next_thought, run_manager=run_manager, value=value
+            inputs=inputs,
+            trajectory=trajectory,
+            next_thought=next_thought,
+            run_manager=run_manager,
+            value=value,
         )
         return should_continue

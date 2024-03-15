@@ -17,8 +17,7 @@ class BaseThoughtEvaluatorContinueJudge(ABC):
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: Any,
         run_manager: Optional[CallbackManager],
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     async def ashould_continue(
@@ -28,8 +27,7 @@ class BaseThoughtEvaluatorContinueJudge(ABC):
         next_thought: List[AgentAction] | AgentAction | AgentFinish,
         value: Any,
         run_manager: Optional[AsyncCallbackManager],
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
 
 class ThresholdThoughtEvaluatorContinueJudge(BaseThoughtEvaluatorContinueJudge):

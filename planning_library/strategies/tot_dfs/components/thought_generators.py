@@ -19,8 +19,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[AgentAction | AgentFinish]: ...
 
     @overload
     def generate(
@@ -30,8 +29,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish]: ...
 
     @abstractmethod
     def generate(
@@ -41,8 +39,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]: ...
 
     @overload
     async def agenerate(
@@ -52,8 +49,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[AgentAction | AgentFinish]: ...
 
     @overload
     async def agenerate(
@@ -63,8 +59,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish]: ...
 
     @abstractmethod
     async def agenerate(
@@ -74,8 +69,7 @@ class BaseThoughtGenerator(ABC):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]: ...
 
 
 class AgentThoughtGenerator(BaseThoughtGenerator):
@@ -87,8 +81,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[AgentAction | AgentFinish]: ...
 
     @overload
     def generate(
@@ -98,8 +91,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[CallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish]: ...
 
     def generate(
         self,
@@ -111,7 +103,9 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
     ) -> List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]:
         # sample: `max_num_thoughts` i.i.d. requests
         if self.generation_mode == "sample":
-            results: List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish] = []
+            results: (
+                List[List[AgentAction] | AgentFinish] | List[AgentAction | AgentFinish]
+            ) = []
             for _ in range(max_num_thoughts):
                 cur_result = agent.plan(
                     intermediate_steps=trajectory,
@@ -134,8 +128,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> List[AgentAction | AgentFinish]:
-        ...
+    ) -> List[AgentAction | AgentFinish]: ...
 
     @overload
     async def agenerate(
@@ -145,8 +138,7 @@ class AgentThoughtGenerator(BaseThoughtGenerator):
         trajectory: List[Tuple[AgentAction, str]],
         max_num_thoughts: int,
         run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> List[List[AgentAction] | AgentFinish]:
-        ...
+    ) -> List[List[AgentAction] | AgentFinish]: ...
 
     async def agenerate(
         self,

@@ -21,13 +21,9 @@ jobs:
         run: |
           poetry install --no-interaction
 
-      - name: Lint with Black
+      - name: Lint with ruff
         run: |
-          poetry run black . --check
-
-      - name: Check import styling with isort
-        run: |
-          poetry run isort . --check
+          poetry run ruff check
 
       - name: Check types with mypy
         run: |

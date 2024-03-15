@@ -2,7 +2,10 @@ import asyncio
 from typing import Any, Dict, List, Optional, overload
 
 from langchain_core.agents import AgentAction, AgentStep
-from langchain_core.callbacks import AsyncCallbackManagerForChainRun, CallbackManagerForChainRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
 from langchain_core.tools import BaseTool
 
 from ..utils.actions_utils import aperform_agent_action, perform_agent_action
@@ -20,8 +23,7 @@ class DefaultActionExecutor(BaseActionExecutor):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     def execute(
@@ -33,8 +35,7 @@ class DefaultActionExecutor(BaseActionExecutor):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[CallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     def execute(
         self,
@@ -80,8 +81,7 @@ class DefaultActionExecutor(BaseActionExecutor):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> List[AgentStep]:
-        ...
+    ) -> List[AgentStep]: ...
 
     @overload
     async def aexecute(
@@ -93,8 +93,7 @@ class DefaultActionExecutor(BaseActionExecutor):
         tool_run_logging_kwargs: Optional[Dict[str, Any]] = None,
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
         **kwargs,
-    ) -> AgentStep:
-        ...
+    ) -> AgentStep: ...
 
     async def aexecute(
         self,

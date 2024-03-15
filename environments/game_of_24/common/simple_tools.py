@@ -2,7 +2,7 @@ from typing import Optional, Type
 
 from langchain.callbacks.manager import CallbackManagerForToolRun
 from langchain.pydantic_v1 import BaseModel, Field
-from langchain.tools import BaseTool, StructuredTool, tool
+from langchain.tools import BaseTool
 
 
 class CalculatorInput(BaseModel):
@@ -15,7 +15,12 @@ class AddTool(BaseTool):
     description = "Adds two numbers."
     args_schema: Type[BaseModel] = CalculatorInput
 
-    def _run(self, number1: float, number2: float, run_manager: Optional[CallbackManagerForToolRun] = None) -> float:
+    def _run(
+        self,
+        number1: float,
+        number2: float,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> float:
         """Use the tool."""
         return number1 + number2
 
@@ -25,7 +30,12 @@ class SubtractTool(BaseTool):
     description = "Subtracts number1 from number2."
     args_schema: Type[BaseModel] = CalculatorInput
 
-    def _run(self, number1: float, number2: float, run_manager: Optional[CallbackManagerForToolRun] = None) -> float:
+    def _run(
+        self,
+        number1: float,
+        number2: float,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> float:
         return number1 - number2
 
 
@@ -34,7 +44,12 @@ class MultiplyTool(BaseTool):
     description = "Multiplies two numbers."
     args_schema: Type[BaseModel] = CalculatorInput
 
-    def _run(self, number1: float, number2: float, run_manager: Optional[CallbackManagerForToolRun] = None) -> float:
+    def _run(
+        self,
+        number1: float,
+        number2: float,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> float:
         return number1 * number2
 
 
@@ -43,5 +58,10 @@ class DivideTool(BaseTool):
     description = "Divides number1 by number2."
     args_schema: Type[BaseModel] = CalculatorInput
 
-    def _run(self, number1: float, number2: float, run_manager: Optional[CallbackManagerForToolRun] = None) -> float:
+    def _run(
+        self,
+        number1: float,
+        number2: float,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> float:
         return number1 / number2

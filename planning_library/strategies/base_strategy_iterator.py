@@ -98,12 +98,14 @@ class BaseCustomStrategyIterator(ABC):
         """
         self.iterations += 1
         self.time_elapsed = time.time() - self.start_time
-        logger.debug(f"Agent Iterations: {self.iterations} ({self.time_elapsed:.2f}s elapsed)")
+        logger.debug(
+            f"Agent Iterations: {self.iterations} ({self.time_elapsed:.2f}s elapsed)"
+        )
 
     @abstractmethod
-    def __iter__(self: "BaseCustomStrategyIterator") -> Iterator[AddableDict]:
-        ...
+    def __iter__(self: "BaseCustomStrategyIterator") -> Iterator[AddableDict]: ...
 
     @abstractmethod
-    async def __aiter__(self: "BaseCustomStrategyIterator") -> AsyncIterator[AddableDict]:
-        ...
+    async def __aiter__(
+        self: "BaseCustomStrategyIterator",
+    ) -> AsyncIterator[AddableDict]: ...

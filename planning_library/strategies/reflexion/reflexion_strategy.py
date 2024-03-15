@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
-from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from ...action_executors import BaseActionExecutor, DefaultActionExecutor
@@ -11,7 +10,9 @@ from ..base_strategy import BaseLangGraphStrategy
 from .components.actors import AgentActor
 from .components.evaluators import ReflexionEvaluator
 from .components.evaluators.backbones import ReflexionRunnableThoughtEvaluator
-from .components.evaluators.continue_judges import ReflexionThresholdEvaluatorContinueJudge
+from .components.evaluators.continue_judges import (
+    ReflexionThresholdEvaluatorContinueJudge,
+)
 from .components.self_reflections import RunnableSelfReflection
 from .reflexion_graph import create_reflexion_graph
 from .utils import ReflexionEvaluatorInput
@@ -63,7 +64,9 @@ class ReflexionStrategy(BaseLangGraphStrategy):
 
         evaluator = ReflexionEvaluator(
             backbone=ReflexionRunnableThoughtEvaluator(evaluator_runnable),
-            judge=ReflexionThresholdEvaluatorContinueJudge(value_threshold if value_threshold else 1.0),
+            judge=ReflexionThresholdEvaluatorContinueJudge(
+                value_threshold if value_threshold else 1.0
+            ),
         )
 
         if self_reflection_runnable is None:
