@@ -6,7 +6,7 @@ from gymnasium.envs.toy_text.frozen_lake import FrozenLakeEnv
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import CallbackManagerForChainRun
 
-from environments.frozen_lake.common.tools import (
+from .tools import (
     MoveTool,
 )
 from planning_library.utils import get_tools_maps, perform_agent_action
@@ -17,7 +17,7 @@ class FrozenLakeEnvWrapper(gym.Wrapper):
         super().__init__(env)
         self.name_to_tool_map, self.color_mapping = get_tools_maps(
             [
-                MoveTool(env=self.env.unwrapped),
+                MoveTool(env=self.env.unwrapped),  # type: ignore[call-arg]
             ]
         )
         # CheckPositionTool(env=self.env.unwrapped),])
@@ -45,10 +45,12 @@ class FrozenLakeEnvWrapper(gym.Wrapper):
         seed: int | None = None,
         options: Dict[str, Any] | None = None,
     ) -> Tuple[ObsType, Dict[str, Any]]:
-        result = self.env.reset(seed=seed, options=options)
+        observation, info = self.env.reset(seed=seed, options=options)
 
         if options is not None and "trajectory" in options:
             for action in options["trajectory"]:
                 assert isinstance(action, AgentAction)
-                result = self.step(action)
-        return result
+                observation, reward, terminated, truncated, info = self.step(
+                    (action, None, {})
+                )
+        return observation, info

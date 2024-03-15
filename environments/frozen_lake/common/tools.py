@@ -1,9 +1,10 @@
 from textwrap import dedent
-from typing import Any, Literal, Tuple, Type
+from typing import Any, Literal, Tuple, Type, Dict
 
 import gymnasium as gym
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
+from gymnasium.core import SupportsFloat
 
 
 class BaseFrozenLakeTool(BaseModel):
@@ -63,7 +64,7 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
         direction: str,
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ) -> Tuple[Tuple[int, int], SupportsFloat, bool, bool, Dict[str, Any]]:
         _observation, reward, terminated, truncated, info = self.env.step(
             MoveTool._convert_direction_to_frozenlake(direction)
         )
@@ -79,26 +80,28 @@ class CheckMapInput(BaseModel): ...
 
 class CheckMapTool(BaseFrozenLakeTool, BaseTool):
     name = "check_map"
-    description = """Peeks at current map without changing its state. 
+    description = dedent("""
+    Peeks at current map without changing its state. 
 
-The map is an n x n grid where different types of cells are denoted by different letters:
-* S - start cell
-* G - goal cell
-* F - frozen cell
-* H - hole cell
-
-Example for 2 x 2 case:
-
-SH
-FG
-"""
+    The map is an n x n grid where different types of cells are denoted by different letters:
+    * S - start cell
+    * G - goal cell
+    * F - frozen cell
+    * H - hole cell
+    
+    Example for 2 x 2 case:
+    
+    SH
+    FG
+    """)
     args_schema: Type[BaseModel] = CheckMapInput
 
     def _run(
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
+        info: Dict[str, Any]
         observation, reward, terminated, truncated, info = (
             "\n".join(
                 "".join(x.decode() for x in y)
@@ -124,7 +127,8 @@ class CheckPositionTool(BaseFrozenLakeTool, BaseTool):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ) -> Tuple[Tuple[int, int], SupportsFloat, bool, bool, Dict[str, Any]]:
+        info: Dict[str, Any]
         observation, reward, terminated, truncated, info = (
             MoveTool._convert_frozenlake_observation_to_position(
                 self.env.get_wrapper_attr("s"), nrow=self.env.get_wrapper_attr("nrow")
