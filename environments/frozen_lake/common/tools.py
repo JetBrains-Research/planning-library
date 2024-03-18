@@ -43,7 +43,7 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
     ) -> Tuple[int, int]:
         # FrozenLake: observation = current_row * nrow + current_col
         current_row, current_col = observation // nrow, observation % nrow
-        return (current_row, current_col)
+        return current_col, current_row
 
     @staticmethod
     def _convert_direction_to_frozenlake(direction: str) -> int:

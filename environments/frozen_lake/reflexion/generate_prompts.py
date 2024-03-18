@@ -32,23 +32,24 @@ generate_openai_tools_prompt = ChatPromptTemplate.from_messages(
             FG
             
             If you step on the hole, the game ends. You are allowed to step on the frozen cells, but note that they are slippery, so there is a probability that you will move perpendicular to the intended direction. 
-            Pay attention to the 'terminated' in tools' output, if it is set to True, it means the game has ended, you are not allowed to move anymore.
+            Pay attention to the 'terminated' in tools' output, if it is set to True, it means the game has ended. DO NOT call any tools, just finish.
             
             Current map:
             {inputs} 
             """),
         ),
-        MessagesPlaceholder("agent_scratchpad"),
-        (
-            "human",
-            "You might have already made some suggestions for the current state - if you did, you will find them below.",
-        ),
-        MessagesPlaceholder("previous_thoughts"),
         (
             "human",
             dedent("""
-            Use tools to move; refrain from calling tools only when the game has ended. 
-            Please, suggest no more than ONE (1) tool call, DIFFERENT from your previous suggestions."""),
+            This might be not your first attempt to play this game. 
+            In this case, you will find self-reflective thoughts below. Make sure to pay extra attention to them, as they aim to identify and mitigate the exact shortcomings that led to failure in previous trials. 
+            """),
         ),
+        MessagesPlaceholder("self_reflections"),
+        (
+            "human",
+            "Good luck! Use tools to move; refrain from calling tools only when the game has ended.",
+        ),
+        MessagesPlaceholder("agent_scratchpad"),
     ]
 )
