@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Sequence
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.runnables import Runnable
+from langchain_core.messages import BaseMessage
 
 
 class BaseSelfReflection(ABC):
@@ -13,7 +14,7 @@ class BaseSelfReflection(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: AgentFinish,
         evaluator_score: Any,
-    ) -> str: ...
+    ) -> Sequence[BaseMessage]: ...
 
     @abstractmethod
     async def aself_reflect(
@@ -22,12 +23,12 @@ class BaseSelfReflection(ABC):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: AgentFinish,
         evaluator_score: Any,
-    ) -> str:
+    ) -> Sequence[BaseMessage]:
         pass
 
 
 class RunnableSelfReflection(BaseSelfReflection):
-    def __init__(self, llm_chain: Runnable[Dict[str, Any], str]):
+    def __init__(self, llm_chain: Runnable[Dict[str, Any], Sequence[BaseMessage]]):
         self.llm_chain = llm_chain
 
     def self_reflect(
@@ -36,7 +37,7 @@ class RunnableSelfReflection(BaseSelfReflection):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: AgentFinish,
         evaluator_score: Any,
-    ) -> str:
+    ) -> Sequence[BaseMessage]:
         return self.llm_chain.invoke(
             {
                 "inputs": inputs,
@@ -52,7 +53,7 @@ class RunnableSelfReflection(BaseSelfReflection):
         intermediate_steps: List[Tuple[AgentAction, str]],
         agent_outcome: AgentFinish,
         evaluator_score: Any,
-    ) -> str:
+    ) -> Sequence[BaseMessage]:
         return await self.llm_chain.ainvoke(
             {
                 "inputs": inputs,

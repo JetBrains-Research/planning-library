@@ -65,13 +65,72 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
         *args: Any,
         **kwargs: Any,
     ) -> Tuple[Tuple[int, int], SupportsFloat, bool, bool, Dict[str, Any]]:
-        _observation, reward, terminated, truncated, info = self.env.step(
+        _observation, reward, terminated, truncated, info = self.env.unwrapped.step(
             MoveTool._convert_direction_to_frozenlake(direction)
         )
         nrow = self.env.get_wrapper_attr("nrow")
         observation = MoveTool._convert_frozenlake_observation_to_position(
             observation=_observation, nrow=nrow
         )
+        return observation, reward, terminated, truncated, info
+
+
+class LookInput(BaseModel):
+    direction: Literal["left", "right", "down", "up"] = Field(
+        description="Which direction to look at."
+    )
+
+
+class LookTool(BaseFrozenLakeTool, BaseTool):
+    name = "look"
+    description = dedent("""
+    Peeks at the adjacent cell in given direction. The following options are possible:
+    * out of bounds - it's not possible to move in the given direction from the current cell;
+    * S - starting cell;
+    * H - hole;
+    * F - frozen cell;
+    * G - goal.
+    """)
+    args_schema: Type[BaseModel] = LookInput
+
+    def _run(
+        self,
+        direction: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
+        nrow = self.env.get_wrapper_attr("nrow")
+        board = self.env.get_wrapper_attr("desc")
+        x, y = MoveTool._convert_frozenlake_observation_to_position(
+            observation=self.env.get_wrapper_attr("s"), nrow=nrow
+        )
+
+        match direction:
+            case "left":
+                observation = "out of bounds" if x == 0 else board[x - 1][y].decode()
+            case "right":
+                observation = (
+                    "out of bounds" if x == nrow - 1 else board[x + 1][y].decode()
+                )
+            case "down":
+                observation = (
+                    "out of bounds" if y == nrow - 1 else board[x][y + 1].decode()
+                )
+            case "up":
+                observation = "out of bounds" if y == 0 else board[x][y - 1].decode()
+            case _:
+                raise ValueError(
+                    "Wrong direction; expected one of: 'left', 'right', 'down', 'up'."
+                )
+
+        info: Dict[str, Any]
+        reward, terminated, truncated, info = (
+            0,
+            False,
+            False,
+            {},
+        )
+
         return observation, reward, terminated, truncated, info
 
 

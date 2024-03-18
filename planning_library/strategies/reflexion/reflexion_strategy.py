@@ -29,7 +29,7 @@ class ReflexionStrategy(BaseLangGraphStrategy):
     def create(
         agent: Runnable,
         tools: Sequence[BaseTool],
-        action_executor: BaseActionExecutor = DefaultActionExecutor(),
+        action_executor: Optional[BaseActionExecutor] = None,
         evaluator_runnable: Optional[Runnable[ReflexionEvaluatorInput, Any]] = None,
         self_reflection_runnable: Optional[Runnable[Dict[str, Any], Any]] = None,
         max_iterations: Optional[int] = None,
@@ -47,7 +47,7 @@ class ReflexionStrategy(BaseLangGraphStrategy):
         Args:
             agent: The agent to run for proposing thoughts at each DFS step.
             tools: The valid tools the agent can call.
-            action_executor: The class responsible for actually executing actions. By default, simply calls LangChain tools.
+            action_executor: The class responsible for actually executing actions.
             evaluator_runnable: Runnable that powers an evaluator. If None, the default model will be used.
             self_reflection_runnable: Runnable that powers self-reflection. If None, the default model will be used.
             max_iterations: Maximum number of iterations. If None, no restrictions on the number of iterations are imposed.
@@ -74,12 +74,14 @@ class ReflexionStrategy(BaseLangGraphStrategy):
 
         self_reflection = RunnableSelfReflection(self_reflection_runnable)
 
+        if action_executor is None:
+            action_executor = DefaultActionExecutor(tools)
+
         return create_reflexion_graph(
             actor=actor,
             evaluator=evaluator,
             self_reflection=self_reflection,
             action_executor=action_executor,
-            tools=tools,
             max_iterations=max_iterations,
             reset_environment=reset_environment,
         )

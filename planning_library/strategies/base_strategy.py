@@ -24,17 +24,20 @@ from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
-from planning_library.action_executors import BaseActionExecutor, DefaultActionExecutor
+from planning_library.action_executors import BaseActionExecutor
 from planning_library.utils.actions_utils import get_tools_maps
 
 
 class BaseCustomStrategy(Chain, ABC):
     agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]
-    tools: Sequence[BaseTool]
-    action_executor: BaseActionExecutor = DefaultActionExecutor()
+    action_executor: BaseActionExecutor
     return_intermediate_steps: bool = False
     max_iterations: int = 15
     verbose: bool = True
+
+    @property
+    def tools(self) -> Sequence[BaseTool]:
+        return self.action_executor.tools
 
     @property
     def input_keys(self) -> List[str]:

@@ -6,9 +6,9 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Sequence,
     Tuple,
     Union,
+    Sequence,
 )
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
@@ -53,7 +53,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     def create(
         agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
         tools: Sequence[BaseTool],
-        action_executor: BaseActionExecutor = DefaultActionExecutor(),
+        action_executor: Optional[BaseActionExecutor] = None,
         evaluator_runnable: Optional[Runnable] = None,
         value_threshold: float = 0.5,
         max_thoughts: int = 3,
@@ -80,9 +80,11 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 "Default runnable for thought evaluator is not supported yet."
             )
 
+        if action_executor is None:
+            action_executor = DefaultActionExecutor(tools)
+
         strategy = TreeOfThoughtsDFSStrategy(
             agent=agent,
-            tools=tools,
             thought_generator=AgentThoughtGenerator(),
             thought_evaluator=ThoughtEvaluator(
                 backbone=RunnableThoughtEvaluator(evaluator_runnable),
@@ -209,6 +211,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 new_node = ToTNode(
                     parent=cur_node, thought=new_thought, observation=observation
                 )
+
                 cur_node.children.append(new_node)
                 if isinstance(new_thought, AgentFinish):
                     self.terminals.append(new_node)

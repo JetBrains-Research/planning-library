@@ -6,20 +6,20 @@ from typing import (
     List,
     Literal,
     Optional,
-    Sequence,
     Tuple,
     TypedDict,
     Union,
 )
+from langchain.memory import ChatMessageHistory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.runnables import RunnableLambda
-from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from ...action_executors import BaseActionExecutor
-from ...utils import get_tools_maps
 from .components.actors import BaseActor
 from .components.evaluators import ReflexionEvaluator
 from .components.self_reflections import BaseSelfReflection
@@ -32,18 +32,24 @@ class ReflexionState(TypedDict):
     agent_outcome: Optional[Union[List[AgentAction], AgentAction, AgentFinish]]
     evaluator_score: Any
     evaluator_should_continue: Optional[bool]
-    self_reflections: List[str]
+    self_reflection_memory: BaseChatMessageHistory
+    self_reflections: List[BaseMessage]
     intermediate_steps: List[Tuple[AgentAction, str]]
     iteration: int
 
 
 class ReflexionNodes:
     @staticmethod
-    def init(state: ReflexionState) -> ReflexionState:
+    def init(
+        state: ReflexionState, memory: Optional[BaseChatMessageHistory] = None
+    ) -> ReflexionState:
         """The entry node in the graph. Initializes the state correctly."""
         state["agent_outcome"] = None
         state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
+        state["self_reflection_memory"] = (
+            ChatMessageHistory() if memory is None else memory
+        )
         state["self_reflections"] = []
         state["intermediate_steps"] = []
         state["iteration"] = 1
@@ -60,6 +66,7 @@ class ReflexionNodes:
         state["evaluator_should_continue"] = None
         state["intermediate_steps"] = []
         state["iteration"] += 1
+        state["self_reflections"] = state["self_reflection_memory"].messages
 
         if reset_environment:
             reset_environment(state["inputs"])
@@ -93,8 +100,6 @@ class ReflexionNodes:
     def execute_actions(
         state: ReflexionState,
         action_executor: BaseActionExecutor,
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
     ) -> ReflexionState:
         """Synchronous version of executing actions as previously requested by an agent."""
         assert (
@@ -106,8 +111,6 @@ class ReflexionNodes:
 
         observation = action_executor.execute(
             actions=state["agent_outcome"],
-            name_to_tool_map=name_to_tool_map,
-            color_mapping=color_mapping,
         )
 
         if isinstance(observation, AgentStep):
@@ -124,8 +127,6 @@ class ReflexionNodes:
     async def aexecute_actions(
         state: ReflexionState,
         action_executor: BaseActionExecutor,
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
     ) -> ReflexionState:
         """Asynchronous version of executing tools as previously requested by an agent."""
         assert (
@@ -137,8 +138,6 @@ class ReflexionNodes:
 
         observation = await action_executor.aexecute(
             actions=state["agent_outcome"],
-            name_to_tool_map=name_to_tool_map,
-            color_mapping=color_mapping,
         )
 
         if isinstance(observation, AgentStep):
@@ -201,7 +200,7 @@ class ReflexionNodes:
             agent_outcome=state["agent_outcome"],
             evaluator_score=state["evaluator_score"],
         )
-        state["self_reflections"].append(reflection)
+        state["self_reflection_memory"].add_messages(reflection)
         return state
 
     @staticmethod
@@ -219,7 +218,7 @@ class ReflexionNodes:
             agent_outcome=state["agent_outcome"],
             evaluator_score=state["evaluator_score"],
         )
-        state["self_reflections"].append(reflection)
+        await state["self_reflection_memory"].aadd_messages(reflection)
         return state
 
 
@@ -262,7 +261,6 @@ def create_reflexion_graph(
     evaluator: ReflexionEvaluator,
     self_reflection: BaseSelfReflection,
     action_executor: BaseActionExecutor,
-    tools: Sequence[BaseTool],
     max_iterations: Optional[int],
     reset_environment: Optional[Callable[[Dict[str, Any]], None]],
 ) -> Pregel:
@@ -282,21 +280,16 @@ def create_reflexion_graph(
         ),
     )
 
-    name_to_tool_map, color_mapping = get_tools_maps(tools)
     builder.add_node(
         "execute_actions",
         RunnableLambda(
             partial(
                 ReflexionNodes.execute_actions,
                 action_executor=action_executor,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
             ),
             afunc=partial(
                 ReflexionNodes.aexecute_actions,
                 action_executor=action_executor,
-                name_to_tool_map=name_to_tool_map,
-                color_mapping=color_mapping,
             ),
         ),
     )

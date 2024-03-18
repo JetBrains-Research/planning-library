@@ -38,7 +38,7 @@ class ToTNode:
                 trajectory_actions.append(
                     (node.observation.action, node.observation.observation)
                 )
-            elif isinstance(node.thought, AgentFinish):
+            elif isinstance(node.thought, AgentFinish) and node is not self:
                 raise ValueError("AgentFinish detected as non-terminal node.")
 
             node = node.parent

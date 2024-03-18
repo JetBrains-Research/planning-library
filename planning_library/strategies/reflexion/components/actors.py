@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Sequence, Tuple, Union
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.messages import BaseMessage
 
 
 class BaseActor(ABC):
@@ -11,7 +12,7 @@ class BaseActor(ABC):
         self,
         inputs: Dict[str, Any],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        self_reflections: Sequence[str],
+        self_reflections: Sequence[BaseMessage],
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]: ...
 
@@ -20,7 +21,7 @@ class BaseActor(ABC):
         self,
         inputs: Dict[str, Any],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        self_reflections: Sequence[str],
+        self_reflections: Sequence[BaseMessage],
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]: ...
 
@@ -33,7 +34,7 @@ class AgentActor(BaseActor):
         self,
         inputs: Dict[str, Any],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        self_reflections: Sequence[str],
+        self_reflections: Sequence[BaseMessage],
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
         return self.agent.plan(
@@ -46,7 +47,7 @@ class AgentActor(BaseActor):
         self,
         inputs: Dict[str, Any],
         intermediate_steps: List[Tuple[AgentAction, str]],
-        self_reflections: Sequence[str],
+        self_reflections: Sequence[BaseMessage],
         **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
         return await self.agent.aplan(

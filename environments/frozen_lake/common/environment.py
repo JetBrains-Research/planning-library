@@ -1,42 +1,28 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple, Sequence
 
 import gymnasium as gym
 from gymnasium.core import ObsType, SupportsFloat
 from gymnasium.envs.toy_text.frozen_lake import FrozenLakeEnv
 from langchain_core.agents import AgentAction
-from langchain_core.callbacks import CallbackManagerForChainRun
+from langchain_core.tools import BaseTool
 
-from .tools import (
-    MoveTool,
-)
-from planning_library.utils import get_tools_maps, perform_agent_action
+from .tools import MoveTool
+from planning_library.action_executors import DefaultActionExecutor
 
 
 class FrozenLakeEnvWrapper(gym.Wrapper):
     def __init__(self, env: FrozenLakeEnv):
         super().__init__(env)
-        self.name_to_tool_map, self.color_mapping = get_tools_maps(
-            [
-                MoveTool(env=self.env.unwrapped),  # type: ignore[call-arg]
-            ]
-        )
-        # CheckPositionTool(env=self.env.unwrapped),])
-        # CheckMapTool(env=self.env.unwrapped)])
+        self._action_executor = DefaultActionExecutor(tools=[MoveTool(env=self)])  # type: ignore[call-arg]
+
+    @property
+    def tools(self) -> Sequence[BaseTool]:
+        return self._action_executor.tools
 
     def step(
-        self,
-        cur_input: Tuple[
-            AgentAction, Optional[CallbackManagerForChainRun], Dict[str, Any]
-        ],
+        self, action: AgentAction
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        action, run_manager, tool_run_logging_kwargs = cur_input
-        result = perform_agent_action(
-            agent_action=action,
-            name_to_tool_map=self.name_to_tool_map,
-            color_mapping=self.color_mapping,
-            run_manager=run_manager,
-            tool_run_kwargs=tool_run_logging_kwargs,
-        )
+        result = self._action_executor.execute(action)
         return result.observation
 
     def reset(
@@ -50,7 +36,5 @@ class FrozenLakeEnvWrapper(gym.Wrapper):
         if options is not None and "trajectory" in options:
             for action in options["trajectory"]:
                 assert isinstance(action, AgentAction)
-                observation, reward, terminated, truncated, info = self.step(
-                    (action, None, {})
-                )
+                observation, reward, terminated, truncated, info = self.step(action)
         return observation, info
