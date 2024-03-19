@@ -1,92 +1,81 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Sequence
 
 import gymnasium as gym
 from gymnasium.core import SupportsFloat
 from langchain_core.agents import AgentAction
 from langchain_core.tools import BaseTool
 
-from .simple_tools import AddTool, DivideTool, MultiplyTool, SubtractTool
+from .tools import AddTool, MultiplyTool, SubtractTool, DivideTool
+from planning_library.action_executors import DefaultActionExecutor
 
 
-class GameOf24(gym.Env[str, AgentAction]):
-    AVAILABLE_ACTIONS: Dict[str, BaseTool] = {
-        "add": AddTool(),  # type: ignore[call-arg]
-        "multiply": MultiplyTool(),  # type: ignore[call-arg]
-        "subtract": SubtractTool(),  # type: ignore[call-arg]
-        "divide": DivideTool(),  # type: ignore[call-arg]
-    }
-
-    def __init__(self, numbers: Optional[List[int]] = None):
-        self.numbers: Dict[float, int] = defaultdict(int)
-        if numbers:
-            for number in numbers:
-                self.numbers[number] += 1
-
-    def __str__(self):
-        return " ".join(
-            [str(key) for key, value in self.numbers.items() for _ in range(value)]
+class GameOf24Env(gym.Env[str, AgentAction]):
+    def __init__(self, numbers: Optional[List[float | int]] = None):
+        self._action_executor = DefaultActionExecutor(
+            tools=[
+                AddTool(env=self),  # type: ignore[call-arg]
+                MultiplyTool(env=self),  # type: ignore[call-arg]
+                SubtractTool(env=self),  # type: ignore[call-arg]
+                DivideTool(env=self),  # type: ignore[call-arg]
+            ]
         )
 
-    def _add_number(self, number: float) -> None:
-        self.numbers[number] += 1
+        self._numbers: Dict[float, int] = defaultdict(int)
+        if numbers:
+            for number in numbers:
+                self._numbers[float(number)] += 1
 
-    def _remove_number(self, number: float) -> None:
-        if number not in self.numbers:
+    @property
+    def numbers(self) -> str:
+        return " ".join(
+            [str(key) for key, value in self._numbers.items() for _ in range(value)]
+        )
+
+    @numbers.setter
+    def numbers(self, numbers: List[float | int]):
+        self._numbers = defaultdict(int)
+        if numbers:
+            for number in numbers:
+                self._numbers[float(number)] += 1
+
+    @property
+    def tools(self) -> Sequence[BaseTool]:
+        return self._action_executor.tools
+
+    def is_success(self) -> bool:
+        return self._numbers == {24.0: 1}
+
+    def is_terminated(self) -> bool:
+        return len(self._numbers) == 1
+
+    def add_number(self, number: float) -> None:
+        self._numbers[number] += 1
+
+    def remove_number(self, number: float) -> None:
+        if number not in self._numbers:
             return
 
-        self.numbers[number] -= 1
-        if self.numbers[number] == 0:
-            del self.numbers[number]
+        self._numbers[number] -= 1
+        if self._numbers[number] == 0:
+            del self._numbers[number]
 
-    def _verify_arguments(self, number1: float, number2: float) -> bool:
+    def verify_arguments(self, number1: float, number2: float) -> bool:
         if number1 == number2:
-            return number1 in self.numbers and self.numbers[number1] >= 2
+            return number1 in self._numbers and self._numbers[number1] >= 2
 
         return (
-            number1 in self.numbers
-            and self.numbers[number1] >= 1
-            and number2 in self.numbers
-            and self.numbers[number2] >= 1
+            number1 in self._numbers
+            and self._numbers[number1] >= 1
+            and number2 in self._numbers
+            and self._numbers[number2] >= 1
         )
 
     def step(
         self, action: AgentAction
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        observation, reward, terminated, truncated, info = (
-            None,
-            0,
-            False,
-            False,
-            {"numbers": str(self)},
-        )
-
-        assert isinstance(action.tool_input, dict)
-        number1, number2 = (
-            float(action.tool_input["number1"]),
-            float(action.tool_input["number2"]),
-        )
-
-        if not self._verify_arguments(number1=number1, number2=number2):
-            observation = "Wrong arguments: not all numbers given as arguments to a tool call are available."
-            return observation, reward, terminated, truncated, info
-
-        if action.tool not in self.AVAILABLE_ACTIONS:
-            observation = f"Unknown tool. Currently available tools: {list(GameOf24.AVAILABLE_ACTIONS.keys())}."
-            return observation, reward, terminated, truncated, info
-
-        result = self.AVAILABLE_ACTIONS[action.tool]._run(number1, number2)
-
-        self._remove_number(number1)
-        self._remove_number(number2)
-        self._add_number(result)
-
-        observation, info = (
-            f"Calling {action.tool} with {number1} and {number2} leads to {result}.",
-            {"numbers": str(self)},
-        )
-
-        return observation, reward, terminated, truncated, info
+        result = self._action_executor.execute(action)
+        return result.observation
 
     def reset(
         self,
@@ -96,15 +85,13 @@ class GameOf24(gym.Env[str, AgentAction]):
     ) -> Tuple[str, Dict[str, Any]]:
         super().reset(seed=seed)
 
-        numbers = options.get("numbers", []) if options else []
-        self.numbers = defaultdict(int)
-        for number in numbers:
-            self.numbers[number] += 1
+        self.numbers = options.get("numbers", []) if options else []
 
-        if options is None or "trajectory" not in options:
-            return "Reset environment.", {"numbers": str(self)}
+        observation, info = "", {"numbers": self.numbers}
 
-        trajectory: List[Tuple[AgentAction, str]] = options["trajectory"]
-        for action, observation in trajectory:
-            self.step(action)
-        return "Reset environment.", {"numbers": str(self)}
+        if options is not None and "trajectory" in options:
+            for action in options["trajectory"]:
+                assert isinstance(action, AgentAction)
+                observation, reward, terminated, truncated, info = self.step(action)
+
+        return observation, info
