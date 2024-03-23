@@ -32,6 +32,7 @@ class BaseCustomStrategy(Chain, ABC):
     agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]
     action_executor: BaseActionExecutor
     return_intermediate_steps: bool = False
+    return_finish_log: bool = False
     max_iterations: int = 15
     verbose: bool = True
 
@@ -75,6 +76,7 @@ class BaseCustomStrategy(Chain, ABC):
     def create(
         agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
         tools: Sequence[BaseTool],
+        action_executor: Optional[BaseActionExecutor] = None,
         **kwargs,
     ) -> "BaseCustomStrategy": ...
 
@@ -107,6 +109,8 @@ class BaseCustomStrategy(Chain, ABC):
         final_output = output.return_values
         if self.return_intermediate_steps:
             final_output["intermediate_steps"] = intermediate_steps
+        if self.return_finish_log:
+            final_output["finish_log"] = output.log
         return final_output
 
     async def _areturn(
@@ -122,6 +126,8 @@ class BaseCustomStrategy(Chain, ABC):
         final_output = output.return_values
         if self.return_intermediate_steps:
             final_output["intermediate_steps"] = intermediate_steps
+        if self.return_finish_log:
+            final_output["finish_log"] = output.log
         return final_output
 
     def _call(
