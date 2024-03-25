@@ -24,6 +24,15 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     def tools(self) -> Sequence[BaseTool]:
         return self._env.get_wrapper_attr("tools")
 
+    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+        """Resets the environment. If actions are passed, will also execute them."""
+
+        options = kwargs
+        if actions:
+            options["actions"] = actions
+
+        self._env.reset(seed=self._seed, options=options)
+
     @overload
     def execute(
         self,
@@ -47,7 +56,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         **reset_kwargs,
     ) -> List[AgentStep] | AgentStep:
         if reset_env_before_action:
-            self._env.reset(seed=self._seed, options=reset_kwargs)
+            self.reset(**reset_kwargs)
 
         if isinstance(actions, AgentAction):
             observation, reward, terminated, truncated, info = self._env.step(actions)

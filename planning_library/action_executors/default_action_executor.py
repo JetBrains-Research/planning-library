@@ -1,4 +1,4 @@
-from typing import List, overload, Sequence
+from typing import List, overload, Sequence, Optional
 
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.tools import BaseTool
@@ -9,6 +9,13 @@ from .base_action_executor import BaseActionExecutor
 class DefaultActionExecutor(BaseActionExecutor):
     def __init__(self, tools: Sequence[BaseTool]):
         self._tool_executor = ToolExecutor(tools)
+
+    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+        """Resets the current state. If actions are passed, will also execute them.
+
+        This action executor doesn't have a state by default, so this method doesn't do anything.
+        """
+        ...
 
     @property
     def tools(self) -> Sequence[BaseTool]:

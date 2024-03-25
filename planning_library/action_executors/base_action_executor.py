@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, overload, Sequence
+from typing import List, overload, Sequence, Optional
 
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.tools import BaseTool
@@ -9,6 +9,11 @@ class BaseActionExecutor(ABC):
     @property
     @abstractmethod
     def tools(self) -> Sequence[BaseTool]: ...
+
+    @abstractmethod
+    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+        """Resets the current state. If actions are passed, will also execute them."""
+        ...
 
     @overload
     def execute(
@@ -33,8 +38,7 @@ class BaseActionExecutor(ABC):
         """Performs actions.
 
         Args:
-            actions: Currently proposed actions. Can be: multi-action, single action, finishing.
-            run_manager: Callback for the current run.
+            actions: Currently proposed actions. Can be: multi-action, single action.
 
         Returns:
               * List[AgentStep] - for multi-action thoughts (List[AgentAction])
@@ -65,7 +69,7 @@ class BaseActionExecutor(ABC):
         """Performs actions asynchronously.
 
         Args:
-            actions: Currently proposed actions. Can be: multi-action, single action, finishing.
+            actions: Currently proposed actions. Can be: multi-action, single action.
 
         Returns:
               * List[AgentStep] - for multi-action thoughts (List[AgentAction])

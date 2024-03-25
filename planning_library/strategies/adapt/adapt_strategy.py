@@ -45,12 +45,14 @@ class ADaPTStrategy(BaseCustomStrategy):
     def _adapt_step(
         self,
         current_task: ADaPTTask,
+        intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
         """Performs an iteration of ADaPT strategy.
 
         Args:
-            current_task: The input for the current step.
+            current_task: The input for the current iteration. It can either be the original input or a subtask of a plan generated on a previous step.
+            intermediate_steps: A list of actions taken before the current iteration.
             run_manager: Callback for the current run.
         """
         # 1: if we're too deep in task decomposition, finish early
@@ -60,11 +62,11 @@ class ADaPTStrategy(BaseCustomStrategy):
                 AgentFinish(
                     return_values={}, log="Maximum decomposition depth reached."
                 ),
-                [],
+                intermediate_steps,
             )
 
         # 2: run task through executor
-        is_completed, agent_outcome, intermediate_steps = self.executor.execute(
+        is_completed, cur_agent_outcome, cur_intermediate_steps = self.executor.execute(
             inputs=current_task["inputs"],
             run_manager=run_manager.get_child(
                 tag=f"executor:depth_{current_task['depth']}"
@@ -73,35 +75,46 @@ class ADaPTStrategy(BaseCustomStrategy):
             else None,
         )
 
-        # if executor estimated successful completion of a task, wrap up
+        # 3.1: if executor estimated successful completion of a task, wrap up
         if is_completed:
-            return True, agent_outcome, intermediate_steps
+            intermediate_steps.extend(cur_intermediate_steps)
+            return True, cur_agent_outcome, intermediate_steps
         else:
-            # otherwise, call planner to further decompose a current task
+            # 3.2: otherwise:
+            # clean up the environment
+            self.action_executor.reset(actions=[step[0] for step in intermediate_steps])
+
+            # call a planner to further decompose a current task
             plan = self.planner.plan(
                 inputs=current_task["inputs"],
                 current_depth=current_task["depth"],
-                agent_outcome=agent_outcome,
-                intermediate_steps=intermediate_steps,
+                agent_outcome=cur_agent_outcome,
+                intermediate_steps=cur_intermediate_steps,
                 run_manager=run_manager.get_child(
                     tag=f"executor:depth_{current_task['depth']}"
                 )
                 if run_manager
                 else None,
             )
+            # when AND logic is given, execute tasks sequentially
             if plan["logic"] == "and":
-                intermediate_steps = []
                 for task in plan["subtasks"]:
                     cur_is_completed, cur_agent_outcome, cur_intermediate_steps = (
-                        self._adapt_step(current_task=task, run_manager=run_manager)
+                        self._adapt_step(
+                            current_task=task,
+                            run_manager=run_manager,
+                            intermediate_steps=intermediate_steps,
+                        )
                     )
+
                     if not cur_is_completed:
                         agent_outcome = AgentFinish(
                             return_values=cur_agent_outcome.return_values,
                             log=f"Couldn't solve the task. Last log: {cur_agent_outcome.log}",
                         )
-                        intermediate_steps.extend(cur_intermediate_steps)
                         return False, agent_outcome, intermediate_steps
+                    else:
+                        intermediate_steps.extend(cur_intermediate_steps)
 
                 agent_outcome = AgentFinish(
                     return_values={}, log="Task solved successfully!"
@@ -118,19 +131,23 @@ class ADaPTStrategy(BaseCustomStrategy):
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = self._adapt_step(
-            current_task={"inputs": inputs, "depth": 0}, run_manager=run_manager
+            current_task={"inputs": inputs, "depth": 0},
+            run_manager=run_manager,
+            intermediate_steps=[],
         )
         yield agent_outcome, intermediate_steps
 
     async def _adapt_astep(
         self,
         current_task: ADaPTTask,
+        intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
         """Performs an iteration of ADaPT strategy asynchronously.
 
         Args:
-            current_task: The input on the current step.
+            current_task: The input for the current iteration. It can either be the original input or a subtask of a plan generated on a previous step.
+            intermediate_steps: A list of actions taken before the current iteration.
             run_manager: Callback for the current run.
         """
         # 1: if we're too deep in task decomposition, finish early
@@ -140,11 +157,15 @@ class ADaPTStrategy(BaseCustomStrategy):
                 AgentFinish(
                     return_values={}, log="Maximum decomposition depth reached."
                 ),
-                [],
+                intermediate_steps,
             )
 
         # 2: run task through executor
-        is_completed, agent_outcome, intermediate_steps = await self.executor.aexecute(
+        (
+            is_completed,
+            cur_agent_outcome,
+            cur_intermediate_steps,
+        ) = await self.executor.aexecute(
             inputs=current_task["inputs"],
             run_manager=run_manager.get_child(
                 tag=f"executor:depth_{current_task['depth']}"
@@ -153,39 +174,47 @@ class ADaPTStrategy(BaseCustomStrategy):
             else None,
         )
 
-        # if executor estimated successful completion of a task, wrap up
+        # 3.1: if executor estimated successful completion of a task, wrap up
         if is_completed:
-            return True, agent_outcome, intermediate_steps
+            intermediate_steps.extend(cur_intermediate_steps)
+            return True, cur_agent_outcome, intermediate_steps
         else:
-            # otherwise, call planner to further decompose a current task
+            # 3.2: otherwise:
+            # clean up the environment
+            self.action_executor.reset(actions=[step[0] for step in intermediate_steps])
+
             plan = await self.planner.aplan(
                 inputs=current_task["inputs"],
                 current_depth=current_task["depth"],
-                agent_outcome=agent_outcome,
-                intermediate_steps=intermediate_steps,
+                agent_outcome=cur_agent_outcome,
+                intermediate_steps=cur_intermediate_steps,
                 run_manager=run_manager.get_child(
                     tag=f"executor:depth_{current_task['depth']}"
                 )
                 if run_manager
                 else None,
             )
+            # when AND logic is given, execute tasks sequentially
             if plan["logic"] == "and":
-                intermediate_steps = []
                 for task in plan["subtasks"]:
                     (
                         cur_is_completed,
                         cur_agent_outcome,
                         cur_intermediate_steps,
                     ) = await self._adapt_astep(
-                        current_task=task, run_manager=run_manager
+                        current_task=task,
+                        run_manager=run_manager,
+                        intermediate_steps=intermediate_steps,
                     )
+
                     if not cur_is_completed:
                         agent_outcome = AgentFinish(
                             return_values=cur_agent_outcome.return_values,
                             log=f"Couldn't solve the task. Last log: {cur_agent_outcome.log}",
                         )
-                        intermediate_steps.extend(cur_intermediate_steps)
                         return False, agent_outcome, intermediate_steps
+                    else:
+                        intermediate_steps.extend(cur_intermediate_steps)
 
                 agent_outcome = AgentFinish(
                     return_values={}, log="Task solved successfully!"
@@ -202,6 +231,8 @@ class ADaPTStrategy(BaseCustomStrategy):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = await self._adapt_astep(
-            current_task={"inputs": inputs, "depth": 0}, run_manager=run_manager
+            current_task={"inputs": inputs, "depth": 0},
+            run_manager=run_manager,
+            intermediate_steps=[],
         )
         yield agent_outcome, intermediate_steps
