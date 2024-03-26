@@ -29,7 +29,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
 
         options = kwargs
         if actions:
-            options["actions"] = actions
+            options["trajectory"] = actions
 
         self._env.reset(seed=self._seed, options=options)
 
