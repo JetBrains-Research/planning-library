@@ -5,12 +5,13 @@ import gymnasium as gym
 from gymnasium.core import SupportsFloat
 from langchain_core.agents import AgentAction
 from langchain_core.tools import BaseTool
+from langchain_core.callbacks import CallbackManager
 
 from .tools import AddTool, MultiplyTool, SubtractTool, DivideTool
 from planning_library.action_executors import DefaultActionExecutor
 
 
-class GameOf24Env(gym.Env[str, AgentAction]):
+class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
     def __init__(self, numbers: Optional[List[float | int]] = None):
         self._action_executor = DefaultActionExecutor(
             tools=[
@@ -72,9 +73,10 @@ class GameOf24Env(gym.Env[str, AgentAction]):
         )
 
     def step(
-        self, action: AgentAction
+        self, inputs: Tuple[AgentAction, Optional[CallbackManager]]
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        result = self._action_executor.execute(action)
+        action, run_manager = inputs
+        result = self._action_executor.execute(action, run_manager=run_manager)
         return result.observation
 
     def reset(
@@ -92,6 +94,11 @@ class GameOf24Env(gym.Env[str, AgentAction]):
         if options is not None and "trajectory" in options:
             for action in options["trajectory"]:
                 assert isinstance(action, AgentAction)
-                observation, reward, terminated, truncated, info = self.step(action)
+                observation, reward, terminated, truncated, info = self.step(
+                    (
+                        action,
+                        options["run_manager"] if "run_manager" in options else None,
+                    )
+                )
 
         return observation, info
