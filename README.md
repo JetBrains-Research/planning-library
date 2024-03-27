@@ -134,8 +134,8 @@ Our implementation of FrozenLake is available under [`environments/frozen_lake`]
 
 ### :house: ALFWorld
 
-> ALFWorld contains interactive TextWorld environments for household navigation. See 
-> :scroll: [ALFWorld](https://arxiv.org/abs/2010.03768) paper or [project website](https://alfworld.github.io/) for more
+> ALFWorld contains interactive TextWorld environments for household navigation. See :scroll: 
+> [ALFWorld](https://arxiv.org/abs/2010.03768) paper or [project website](https://alfworld.github.io/) for more
 > information.
 
 Our implementation of ALFWorld is available under [`environments/alfword`](environments/alfword) folder.
