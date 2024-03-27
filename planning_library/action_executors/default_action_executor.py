@@ -4,6 +4,10 @@ from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt.tool_executor import ToolExecutor  # type: ignore[import-untyped]
 from .base_action_executor import BaseActionExecutor
+from langchain_core.callbacks import (
+    CallbackManager,
+    AsyncCallbackManager,
+)
 
 
 class DefaultActionExecutor(BaseActionExecutor):
@@ -25,6 +29,8 @@ class DefaultActionExecutor(BaseActionExecutor):
     def execute(
         self,
         actions: List[AgentAction],
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -32,15 +38,22 @@ class DefaultActionExecutor(BaseActionExecutor):
     def execute(
         self,
         actions: AgentAction,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
     def execute(
         self,
         actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
-        observations = self._tool_executor.invoke(actions)
+        observations = self._tool_executor.invoke(
+            actions,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
         if isinstance(observations, list):
             assert isinstance(actions, list)
             return [
@@ -55,6 +68,8 @@ class DefaultActionExecutor(BaseActionExecutor):
     async def aexecute(
         self,
         actions: List[AgentAction],
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -62,15 +77,22 @@ class DefaultActionExecutor(BaseActionExecutor):
     async def aexecute(
         self,
         actions: AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
     async def aexecute(
         self,
         actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
-        observations = await self._tool_executor.ainvoke(actions)
+        observations = await self._tool_executor.ainvoke(
+            actions,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
         if isinstance(observations, list):
             assert isinstance(actions, list)
             return [

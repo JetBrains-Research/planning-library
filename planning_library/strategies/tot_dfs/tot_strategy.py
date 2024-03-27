@@ -70,6 +70,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         Args:
             agent: The agent to run for proposing thoughts at each DFS step.
             tools: The valid tools the agent can call.
+            action_executor: The action executor for the current strategy. If None, the default will be used.
             evaluator_runnable: Runnable that powers ThoughtEvaluator. If None, the default model will be used.
             value_threshold: Threshold for evaluator; only thoughts evaluated higher than the threshold will be further explored.
             max_thoughts: Maximum number of new thoughts at each DFS step.
@@ -199,13 +200,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 else:
                     observation = self.action_executor.execute(
                         actions=new_thought,
-                        name_to_tool_map=name_to_tool_map,
-                        color_mapping=color_mapping,
-                        run_manager=run_manager,
-                        verbose=self.verbose,
-                        tool_run_logging_kwargs=self.agent.tool_run_logging_kwargs(),
+                        run_manager=run_manager.get_child() if run_manager else None,
                         reset_before_action=True,
-                        reset_kwargs={"trajectory": trajectory},
+                        trajectory=trajectory,
                     )
 
                 new_node = ToTNode(
@@ -331,13 +328,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 else:
                     observation = await self.action_executor.aexecute(
                         actions=new_thought,
-                        name_to_tool_map=name_to_tool_map,
-                        color_mapping=color_mapping,
-                        run_manager=run_manager,
-                        verbose=self.verbose,
-                        tool_run_logging_kwargs=self.agent.tool_run_logging_kwargs(),
+                        run_manager=run_manager.get_child() if run_manager else None,
                         reset_before_action=True,
-                        reset_kwargs={"trajectory": trajectory},
+                        trajectory=trajectory,
                     )
 
                 new_node = ToTNode(

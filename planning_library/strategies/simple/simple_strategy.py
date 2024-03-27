@@ -25,7 +25,7 @@ class SimpleStrategy(BaseCustomStrategy):
     ) -> "SimpleStrategy":
         if action_executor is None:
             action_executor = DefaultActionExecutor(tools=tools)
-        return SimpleStrategy(agent=agent, action_executor=action_executor)
+        return SimpleStrategy(agent=agent, action_executor=action_executor, **kwargs)
 
     def _run_strategy(
         self,
@@ -48,7 +48,10 @@ class SimpleStrategy(BaseCustomStrategy):
                 yield agent_outcome, intermediate_steps
                 return
 
-            action_results = self.action_executor.execute(agent_outcome)
+            action_results = self.action_executor.execute(
+                agent_outcome,
+                run_manager=run_manager.get_child() if run_manager else None,
+            )
 
             if isinstance(action_results, AgentStep):
                 intermediate_steps.append(

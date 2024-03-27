@@ -1,9 +1,9 @@
-from typing import List, Optional, overload, Sequence
+from typing import List, Optional, Tuple, overload, Sequence
 
 import gymnasium as gym
 from gymnasium.core import ObsType
 from langchain_core.agents import AgentAction, AgentStep
-
+from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from .base_action_executor import BaseActionExecutor
 from langchain_core.tools import BaseTool
 
@@ -13,7 +13,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         self,
         env: gym.Env[
             ObsType,
-            AgentAction,
+            Tuple[AgentAction, Optional[CallbackManager]],
         ],
         seed: Optional[int] = None,
     ):
@@ -37,7 +37,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     def execute(
         self,
         actions: List[AgentAction],
-        reset_env_before_action: bool = False,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep]: ...
 
@@ -45,21 +46,25 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     def execute(
         self,
         actions: AgentAction,
-        reset_env_before_action: bool = False,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **reset_kwargs,
     ) -> AgentStep: ...
 
     def execute(
         self,
         actions: List[AgentAction] | AgentAction,
-        reset_env_before_action: bool = False,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep] | AgentStep:
-        if reset_env_before_action:
-            self.reset(**reset_kwargs)
+        if reset_before_action:
+            self.reset(**reset_kwargs, run_manager=run_manager)
 
         if isinstance(actions, AgentAction):
-            observation, reward, terminated, truncated, info = self._env.step(actions)
+            observation, reward, terminated, truncated, info = self._env.step(
+                (actions, run_manager)
+            )
 
             return AgentStep(
                 action=actions,
@@ -75,7 +80,8 @@ class GymnasiumActionExecutor(BaseActionExecutor):
         return [
             self.execute(
                 actions=action,
-                reset_env_before_action=reset_env_before_action,
+                run_manager=run_manager,
+                reset_before_action=reset_before_action,
                 **reset_kwargs,
             )
             for action in actions
@@ -85,6 +91,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     async def aexecute(
         self,
         actions: List[AgentAction],
+        run_manager: Optional[AsyncCallbackManager] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep]: ...
@@ -93,6 +100,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     async def aexecute(
         self,
         actions: AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
     ) -> AgentStep: ...
@@ -100,6 +108,7 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     async def aexecute(
         self,
         actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
         reset_before_action: bool = False,
         **reset_kwargs,
     ) -> List[AgentStep] | AgentStep:

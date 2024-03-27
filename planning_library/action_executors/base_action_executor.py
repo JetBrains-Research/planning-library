@@ -3,6 +3,7 @@ from typing import List, overload, Sequence, Optional
 
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.tools import BaseTool
+from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 
 
 class BaseActionExecutor(ABC):
@@ -19,6 +20,8 @@ class BaseActionExecutor(ABC):
     def execute(
         self,
         actions: List[AgentAction],
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -26,6 +29,8 @@ class BaseActionExecutor(ABC):
     def execute(
         self,
         actions: AgentAction,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -33,6 +38,8 @@ class BaseActionExecutor(ABC):
     def execute(
         self,
         actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[CallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions.
@@ -50,6 +57,8 @@ class BaseActionExecutor(ABC):
     async def aexecute(
         self,
         actions: List[AgentAction],
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -57,6 +66,8 @@ class BaseActionExecutor(ABC):
     async def aexecute(
         self,
         actions: AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -64,6 +75,8 @@ class BaseActionExecutor(ABC):
     async def aexecute(
         self,
         actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions asynchronously.

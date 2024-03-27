@@ -8,9 +8,10 @@ from gymnasium.core import SupportsFloat
 from .tools import get_alfworld_tools
 from planning_library.action_executors import DefaultActionExecutor
 from textworld.gym.envs.textworld_batch import TextworldBatchGymEnv  # type: ignore[import-untyped]
+from langchain_core.callbacks import CallbackManager
 
 
-class ALFWorldEnv(gym.Env[str, AgentAction]):
+class ALFWorldEnv(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
     def __init__(
         self,
         config_path: str,
@@ -32,9 +33,10 @@ class ALFWorldEnv(gym.Env[str, AgentAction]):
         self.env.seed(seed)
 
     def step(
-        self, action: AgentAction
+        self, inputs: Tuple[AgentAction, Optional[CallbackManager]]
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        result = self._action_executor.execute(action)
+        action, run_manager = inputs
+        result = self._action_executor.execute(action, run_manager=run_manager)
         observation, reward, terminated, truncated, info = result.observation
         return observation, reward, terminated, truncated, {}
 
@@ -51,5 +53,10 @@ class ALFWorldEnv(gym.Env[str, AgentAction]):
         if options is not None and "trajectory" in options:
             for action in options["trajectory"]:
                 assert isinstance(action, AgentAction)
-                observation, reward, terminated, truncated, info = self.step(action)
+                observation, reward, terminated, truncated, info = self.step(
+                    (
+                        action,
+                        options["run_manager"] if "run_manager" in options else None,
+                    )
+                )
         return observation, info

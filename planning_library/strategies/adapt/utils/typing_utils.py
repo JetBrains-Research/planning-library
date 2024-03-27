@@ -7,6 +7,11 @@ class ADaPTTask(TypedDict):
     depth: int
 
 
+class InitialADaPTPlan(TypedDict):
+    subtasks: List[Dict[str, Any]]
+    logic: Literal["and", "or"]
+
+
 class ADaPTPlan(TypedDict):
     subtasks: List[ADaPTTask]
     logic: Literal["and", "or"]

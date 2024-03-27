@@ -13,6 +13,10 @@ from ...action_executors import BaseActionExecutor
 from ..base_strategy import BaseCustomStrategy
 from .components import BaseADaPTExecutor, BaseADaPTPlanner
 from planning_library.strategies.adapt.utils import ADaPTTask
+from planning_library.action_executors import DefaultActionExecutor
+from planning_library.strategies.adapt.components.executors import StrategyADaPTExecutor
+from planning_library.strategies.adapt.components.planners import RunnableADaPTPlanner
+from planning_library.strategies.simple import SimpleStrategy
 
 
 class ADaPTStrategy(BaseCustomStrategy):
@@ -31,6 +35,7 @@ class ADaPTStrategy(BaseCustomStrategy):
         tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
         planner_runnable: Optional[Runnable] = None,
+        executor_strategy: Optional[BaseCustomStrategy] = None,
         max_depth: int = 20,
         **kwargs,
     ) -> "ADaPTStrategy":
@@ -39,8 +44,45 @@ class ADaPTStrategy(BaseCustomStrategy):
         Args:
             agent: The agent to run for proposing thoughts at each DFS step.
             tools: The valid tools the agent can call.
+            action_executor: The action executor for the current strategy. If None, the default will be used.
+            planner_runnable: Runnable that powers ADaPT planner. If None, the default model will be used.
+            executor_strategy: Strategy that powers ADAPT executor. If None, the default model will be used.
+            max_depth: Maximum depth of the ADaPT strategy (how deep the decomposition can go).
         """
-        raise NotImplementedError()
+        executor_kwargs = {
+            kwarg[len("executor_") :]: kwargs[kwarg]
+            for kwarg in kwargs
+            if kwarg.startswith("executor_")
+        }
+        adapt_kwargs = {
+            kwarg: kwargs[kwarg]
+            for kwarg in kwargs
+            if not kwarg.startswith("executor_")
+        }
+
+        if planner_runnable is None:
+            raise ValueError("Default runnable for ADaPT planner is not supported yet.")
+
+        if action_executor is None:
+            action_executor = DefaultActionExecutor(tools)
+
+        if executor_strategy is None:
+            executor_strategy = SimpleStrategy.create(
+                agent=agent,
+                tools=tools,
+                action_executor=action_executor,
+                **executor_kwargs,
+            )
+
+        strategy = ADaPTStrategy(
+            agent=agent,
+            action_executor=action_executor,
+            executor=StrategyADaPTExecutor(strategy=executor_strategy),
+            planner=RunnableADaPTPlanner(runnable=planner_runnable),
+            max_depth=max_depth,
+            **adapt_kwargs,
+        )
+        return strategy
 
     def _adapt_step(
         self,
@@ -82,7 +124,10 @@ class ADaPTStrategy(BaseCustomStrategy):
         else:
             # 3.2: otherwise:
             # clean up the environment
-            self.action_executor.reset(actions=[step[0] for step in intermediate_steps])
+            self.action_executor.reset(
+                actions=[step[0] for step in intermediate_steps],
+                run_manager=run_manager.get_child() if run_manager else None,
+            )
 
             # call a planner to further decompose a current task
             plan = self.planner.plan(

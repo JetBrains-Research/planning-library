@@ -8,7 +8,7 @@ class EmptyInput(BaseModel): ...
 
 class ObjectInput(BaseModel):
     object_type: str = Field(
-        description="A type of the portable object.", examples=["the apple", "the mug"]
+        description="A type of the portable object.", examples=["apple", "mug"]
     )
     object_id: int = Field(
         description="A specific number associated with the object (e.g., when there are "
@@ -20,7 +20,7 @@ class ObjectInput(BaseModel):
 class ReceptableInput(BaseModel):
     receptable_type: str = Field(
         description="A type of the receptable.",
-        examples=["the coffee table", "the drawer", "the countertop"],
+        examples=["coffee table", "drawer", "countertop"],
     )
     receptable_id: int = Field(
         description="A specific number associated with the receptable (e.g., when there are "
@@ -31,7 +31,7 @@ class ReceptableInput(BaseModel):
 
 class ObjectAndReceptableInput(BaseModel):
     object_type: str = Field(
-        description="A type of the portable object.", examples=["the apple", "the mug"]
+        description="A type of the portable object.", examples=["apple", "mug"]
     )
     object_id: int = Field(
         description="A specific number associated with the object (e.g., when there are "
@@ -40,7 +40,7 @@ class ObjectAndReceptableInput(BaseModel):
     )
     receptable_type: str = Field(
         description="A type of the receptable.",
-        examples=["the coffee table", "the drawer", "the countertop"],
+        examples=["coffee table", "drawer", "countertop"],
     )
     receptable_id: int = Field(
         description="A specific number associated with the receptable (e.g., when there are "
@@ -52,7 +52,7 @@ class ObjectAndReceptableInput(BaseModel):
 class ObjectOrReceptableInput(BaseModel):
     type: str = Field(
         description="A type of the object (might be either a portable object or a static one).",
-        examples=["the apple", "the coffee table"],
+        examples=["apple", "coffee table"],
     )
     id: int = Field(
         description="A specific number associated with the object (e.g., when there are "

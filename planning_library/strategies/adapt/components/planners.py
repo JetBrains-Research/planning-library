@@ -5,7 +5,7 @@ from langchain_core.callbacks import (
 )
 from typing import Optional, Tuple, List, Dict, Any
 from langchain_core.agents import AgentAction, AgentFinish
-from planning_library.strategies.adapt.utils import ADaPTPlan
+from planning_library.strategies.adapt.utils import ADaPTPlan, InitialADaPTPlan
 from langchain_core.runnables import Runnable
 
 
@@ -32,7 +32,7 @@ class BaseADaPTPlanner(ABC):
 
 
 class RunnableADaPTPlanner(BaseADaPTPlanner):
-    def __init__(self, runnable: Runnable[Dict[str, Any], ADaPTPlan]):
+    def __init__(self, runnable: Runnable[Dict[str, Any], InitialADaPTPlan]):
         self.runnable = runnable
 
     def plan(
@@ -43,15 +43,21 @@ class RunnableADaPTPlanner(BaseADaPTPlanner):
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManager] = None,
     ) -> ADaPTPlan:
-        return self.runnable.invoke(
+        initial_plan = self.runnable.invoke(
             {
                 **inputs,
-                "current_depth": current_depth,
                 "agent_outcome": agent_outcome,
                 "intermediate_steps": intermediate_steps,
             },
             {"callbacks": run_manager} if run_manager else {},
         )
+        return {
+            "subtasks": [
+                {"inputs": task, "depth": current_depth + 1}
+                for task in initial_plan["subtasks"]
+            ],
+            "logic": initial_plan["logic"],
+        }
 
     async def aplan(
         self,
@@ -61,12 +67,18 @@ class RunnableADaPTPlanner(BaseADaPTPlanner):
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> ADaPTPlan:
-        return await self.runnable.ainvoke(
+        initial_plan = await self.runnable.ainvoke(
             {
                 **inputs,
-                "current_depth": current_depth,
                 "agent_outcome": agent_outcome,
                 "intermediate_steps": intermediate_steps,
             },
             {"callbacks": run_manager} if run_manager else {},
         )
+        return {
+            "subtasks": [
+                {"inputs": task, "depth": current_depth + 1}
+                for task in initial_plan["subtasks"]
+            ],
+            "logic": initial_plan["logic"],
+        }

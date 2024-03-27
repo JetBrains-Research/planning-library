@@ -148,7 +148,7 @@ class BaseCustomStrategy(Chain, ABC):
             )
         ]
 
-        return {"outputs": outputs}
+        return {key: [output[key] for output in outputs] for key in outputs[0]}
 
     async def _acall(
         self,
@@ -172,7 +172,7 @@ class BaseCustomStrategy(Chain, ABC):
             )
             outputs.append(output)
 
-        return {"outputs": outputs}
+        return {key: [output[key] for output in outputs] for key in outputs[0]}
 
 
 class BaseLangGraphStrategy(ABC):

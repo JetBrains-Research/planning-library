@@ -31,30 +31,39 @@ class StrategyADaPTExecutor(BaseADaPTExecutor):
     def _is_completed(self, outcome: AgentFinish) -> bool:
         return "task completed" in outcome.log.lower()
 
+    def _process_strategy_outputs(
+        self, outputs: Dict[str, Any]
+    ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
+        outcome = AgentFinish(
+            return_values={
+                key: value[0]
+                for key, value in outputs.items()
+                if isinstance(key, list)
+                and key not in ["finish_log", "intermediate_steps"]
+            },
+            log=outputs["finish_log"][0],
+        )
+        is_completed = self._is_completed(outcome)
+        return is_completed, outcome, outputs["intermediate_steps"][0]
+
     def execute(
         self,
         inputs: Dict[str, Any],
         run_manager: Optional[CallbackManager] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
-        outputs = self._executor.invoke(**inputs)["outputs"]
-        intermediate_steps = outputs.get("intermediate_steps", [])
-        finish_log = outputs.get("finish_log", "")
-        del outputs["intermediate_steps"]
-        del outputs["finish_log"]
-        outcome = AgentFinish(return_values=outputs, log=finish_log)
-        is_completed = self._is_completed(outcome)
-        return is_completed, outcome, intermediate_steps
+        outputs = self._executor.invoke(
+            inputs,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
+        return self._process_strategy_outputs(outputs)
 
     async def aexecute(
         self,
         inputs: Dict[str, Any],
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
-        outputs = await self._executor.ainvoke(**inputs)
-        intermediate_steps = outputs.get("intermediate_steps", [])
-        finish_log = outputs.get("finish_log", "")
-        del outputs["intermediate_steps"]
-        del outputs["finish_log"]
-        outcome = AgentFinish(return_values=outputs, log=finish_log)
-        is_completed = self._is_completed(outcome)
-        return is_completed, outcome, intermediate_steps
+        outputs = await self._executor.ainvoke(
+            inputs,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
+        return self._process_strategy_outputs(outputs)
