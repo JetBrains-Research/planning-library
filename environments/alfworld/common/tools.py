@@ -32,7 +32,7 @@ def get_alfworld_tools(env: TextworldBatchGymEnv) -> List[BaseTool]:
 
 class GoToTool(BaseALFWorldTool, BaseTool):
     name = "goto"
-    description = """Go to a specified receptable (static object)."""
+    description = """Go to the specified receptable (static object)."""
     args_schema: Type[BaseModel] = ReceptableInput
 
     def _run(
@@ -50,7 +50,7 @@ class GoToTool(BaseALFWorldTool, BaseTool):
 
 class OpenTool(BaseALFWorldTool, BaseTool):
     name = "open"
-    description = """Open a specified receptable (static object). Only available when you're already near a receptable."""
+    description = """Open a specified receptable (static object). Only works when you're near a receptable and when it is closed."""
     args_schema: Type[BaseModel] = ReceptableInput
 
     def _run(
@@ -68,7 +68,7 @@ class OpenTool(BaseALFWorldTool, BaseTool):
 
 class CloseTool(BaseALFWorldTool, BaseTool):
     name = "close"
-    description = """Close a specified receptable (static object). Only available when you're already near a receptable."""
+    description = """Close a specified receptable (static object). Only available when you're near a receptable and when it is closed."""
     args_schema: Type[BaseModel] = ReceptableInput
 
     def _run(
@@ -86,7 +86,7 @@ class CloseTool(BaseALFWorldTool, BaseTool):
 
 class TakeTool(BaseALFWorldTool, BaseTool):
     name = "take"
-    description = """Pick up a specified portable object from a specified receptable (static object). Only available when you're already near a receptable."""
+    description = """Pick up the specified portable object from the specified receptable (static object). Only works when you're near the specified receptable and the specified object is present in/on the receptable."""
     args_schema: Type[BaseModel] = ObjectAndReceptableInput
 
     def _run(
@@ -106,7 +106,7 @@ class TakeTool(BaseALFWorldTool, BaseTool):
 
 class PutTool(BaseALFWorldTool, BaseTool):
     name = "put"
-    description = """Put a specified portable object in/щт a specified receptable (static object). Only available when you're already near a receptable and carry a portable object in your inventory."""
+    description = """Put the specified portable object in/on the specified receptable (static object). Only available when you're near the specified receptable and carry the specified portable object in your inventory."""
     args_schema: Type[BaseModel] = ObjectAndReceptableInput
 
     def _run(
@@ -126,7 +126,7 @@ class PutTool(BaseALFWorldTool, BaseTool):
 
 class ToggleTool(BaseALFWorldTool, BaseTool):
     name = "toggle"
-    description = """Toggle a specified object on/off (can be either a portable object or a static receptable). Only available when you're already near a receptable/a portable object or carry a portable object."""
+    description = """Toggle the specified object on/off (can be either a portable object or a static receptable). Only available when you're near the specified receptable/portable object or carry the specified portable object."""
     args_schema: Type[BaseModel] = ObjectOrReceptableInput
 
     def _run(
@@ -142,7 +142,7 @@ class ToggleTool(BaseALFWorldTool, BaseTool):
 
 class HeatTool(BaseALFWorldTool, BaseTool):
     name = "heat"
-    description = """Heat a portable object via a receptable (static object). Only available when you're already near a receptable and carry a portable object."""
+    description = """Heat the portable object via the receptable (static object). Only available when you're already near the receptable and the portable object is in/on the receptable."""
     args_schema: Type[BaseModel] = ObjectAndReceptableInput
 
     def _run(
@@ -162,7 +162,7 @@ class HeatTool(BaseALFWorldTool, BaseTool):
 
 class CoolTool(BaseALFWorldTool, BaseTool):
     name = "cool"
-    description = """Cool a portable object via a receptable (static object). Only available when you're already near a receptable and carry a portable object."""
+    description = """Cool the portable object via the receptable (static object). Only available when you're already near a receptable and the portable object is in/on the receptable."""
     args_schema: Type[BaseModel] = ObjectAndReceptableInput
 
     def _run(
@@ -182,7 +182,7 @@ class CoolTool(BaseALFWorldTool, BaseTool):
 
 class CleanTool(BaseALFWorldTool, BaseTool):
     name = "clean"
-    description = """Clean a portable object via a receptable (static object). Only available when you're already near a receptable and a portable object or carry a portable object."""
+    description = """Clean the portable object via the receptable (static object). Only available when you're already near a receptable and the portable object is in/on the receptable."""
     args_schema: Type[BaseModel] = ObjectAndReceptableInput
 
     def _run(
@@ -202,7 +202,7 @@ class CleanTool(BaseALFWorldTool, BaseTool):
 
 class ExamineTool(BaseALFWorldTool, BaseTool):
     name = "examine"
-    description = """Examine a specified object (can be either a portable object or a static receptable). Only available when you're already near a receptable/a portable object or carry a portable object."""
+    description = """Examine the specified object (can be either a portable object or a static receptable). Only available when you're near the receptable/portable object or carry the specified portable object."""
     args_schema: Type[BaseModel] = ObjectOrReceptableInput
 
     def _run(
