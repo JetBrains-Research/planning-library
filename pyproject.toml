@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "planning-library"
+version = "0.1.0"
+description = ""
+authors = []
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+langchain = "^0.1.4"
+langchain-core = "^0.1.30"
+langgraph = "^0.0.26"
+gymnasium = "^0.29.1"
+
+[tool.poetry.group.examples.dependencies]
+langchain-experimental = "^0.0.49"
+langchain-openai = "^0.0.5"
+jupyter = "^1.0.0"
+pandas = "^2.0.3"
+matplotlib = "^3.7.2"
+seaborn = "^0.12.2"
+gymnasium = {extras = ["toy-text"], version = "^0.29.1"}
+moviepy = "^1.0.3"
+alfworld = {extras = ["full"], version = "^0.3.3"}
+
+[tool.poetry.group.dev.dependencies]
+black = {extras = ["jupyter"], version = "^23.7.0"}
+isort = "^5.12.0"
+mypy = "^1.5.0"
+pytest = "^7.4.0"
+wandb = "^0.16.3"
+grandalf = "^0.8"
+ruff = "^0.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[tool.isort]
+line_length = 120
+py_version = 310
+profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = []
+ignore_missing_imports = true
