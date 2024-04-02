@@ -2,17 +2,42 @@
 
 ## Installation
 
-Currently, only installation from source is supported:
+### As a package
 
-```shell
-pip install git+https://github.com/JetBrains-Research/planning-library.git@saridormi-dev
+Currently, only installation from source is supported. 
+
+* For Poetry:
+
+    ```shell
+    poetry add git+https://github.com/JetBrains-Research/planning-library.git
+    ```
+
+* For pip:
+
+    ```shell
+    pip install git+https://github.com/JetBrains-Research/planning-library.git
+    ```
+
+### For development
+
+#### Step 0: Install prerequisites
+
+In general, the only prerequisite is :snake: Python. However, note the [TextWorld requirements](https://github.com/microsoft/TextWorld/tree/main?tab=readme-ov-file#requirements) if you run into any issues.
+
+> You can use [pyenv](https://github.com/pyenv/pyenv) to set the specific Python version.  
+
+#### Step 2: Clone repository
+
+```
+git clone git@github.com:JetBrains-Research/planning-library.git
 ```
 
-If you do not wish to install
+#### Step 3: Install Python dependencies
+
+* For Poetry: run `poetry install`.
+    * **Note**. If you do not need to run CI or to run examples, you can exclude the corresponding dependencies groups: `poetry install --without dev,examples`  
 
 ## Quick Tour
-
-> :construction: Subject to change
 
 Currently, we have two types of strategies: **custom strategies** and
 **[LangGraph](https://github.com/langchain-ai/langgraph/tree/main) strategies**.
@@ -26,7 +51,7 @@ by [`BaseCustomStrategy`](planning_library/strategies/base_strategy.py).
 
 #### Initializing strategy
 
-Each custom strategy can be created by envoking a static method `create` with at least agent and tools.
+Each custom strategy can be created by invoking a static method `create` with at least agent and tools.
 
 ```python
 from planning_library.strategies import TreeOfThoughtsDFSStrategy
@@ -41,8 +66,7 @@ strategy_executor = TreeOfThoughtsDFSStrategy.create(
 
 Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
 intermediate steps). :construction: We will provide some default implementations for such components, but they can also
-be redefined
-them with custom runnables tailored for specific tasks.
+be redefined with custom runnables tailored for specific tasks.
 
 #### Using strategy
 
@@ -64,7 +88,7 @@ by [`BaseLangGraphStrategy`](planning_library/strategies/base_strategy.py).
 
 #### Initializing strategy
 
-Each LangGraph strategy can be created by envoking a static method `create` with (at least) agent and tools.
+Each LangGraph strategy can be created by invoking a static method `create` with (at least) agent and tools.
 
 ```python
 from planning_library.strategies import ReflexionStrategy
@@ -76,8 +100,7 @@ strategy_graph = ReflexionStrategy.create(agent=agent, tools=tools)
 
 Some strategies contain other meaningful components (e.g., an evaluator, which is responsible for evaluating
 intermediate steps). :construction: We will provide some default implementations for such components, but they can also
-be redefined
-them with custom runnables tailored for specific tasks.
+be redefined with custom runnables tailored for specific tasks.
 
 #### Using strategy
 
