@@ -1,3 +1,4 @@
+from __future__ import annotations
 import gymnasium as gym
 from langchain_core.agents import AgentAction
 from langchain_core.tools import BaseTool
