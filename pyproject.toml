@@ -11,6 +11,7 @@ langchain = "^0.1.4"
 langchain-core = "^0.1.30"
 langgraph = "^0.0.26"
 gymnasium = "^0.29.1"
+urllib3 = "<1.27"
 
 [tool.poetry.group.examples.dependencies]
 langchain-experimental = "^0.0.49"
