@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import List, overload, Sequence, Optional
-
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.tools import BaseTool
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager

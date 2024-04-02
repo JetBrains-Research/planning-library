@@ -8,6 +8,8 @@ Currently, only installation from source is supported:
 pip install git+https://github.com/JetBrains-Research/planning-library.git@saridormi-dev
 ```
 
+If you do not wish to install
+
 ## Quick Tour
 
 > :construction: Subject to change

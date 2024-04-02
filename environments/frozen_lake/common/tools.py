@@ -47,17 +47,16 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
 
     @staticmethod
     def _convert_direction_to_frozenlake(direction: str) -> int:
-        match direction:
-            case "left":
-                return 0
-            case "down":
-                return 1
-            case "right":
-                return 2
-            case "up":
-                return 3
-            case _:
-                raise ValueError(f"Wrong tool input {direction}.")
+        if direction == "left":
+            return 0
+        elif direction == "down":
+            return 1
+        elif direction == "right":
+            return 2
+        elif direction == "up":
+            return 3
+        else:
+            raise ValueError(f"Wrong tool input {direction}.")
 
     def _run(
         self,
@@ -105,23 +104,18 @@ class LookTool(BaseFrozenLakeTool, BaseTool):
             observation=self.env.get_wrapper_attr("s"), nrow=nrow
         )
 
-        match direction:
-            case "left":
-                observation = "out of bounds" if x == 0 else board[x - 1][y].decode()
-            case "right":
-                observation = (
-                    "out of bounds" if x == nrow - 1 else board[x + 1][y].decode()
-                )
-            case "down":
-                observation = (
-                    "out of bounds" if y == nrow - 1 else board[x][y + 1].decode()
-                )
-            case "up":
-                observation = "out of bounds" if y == 0 else board[x][y - 1].decode()
-            case _:
-                raise ValueError(
-                    "Wrong direction; expected one of: 'left', 'right', 'down', 'up'."
-                )
+        if direction == "left":
+            observation = "out of bounds" if x == 0 else board[x - 1][y].decode()
+        elif direction == "right":
+            observation = "out of bounds" if x == nrow - 1 else board[x + 1][y].decode()
+        elif direction == "down":
+            observation = "out of bounds" if y == nrow - 1 else board[x][y + 1].decode()
+        elif direction == "up":
+            observation = "out of bounds" if y == 0 else board[x][y - 1].decode()
+        else:
+            raise ValueError(
+                "Wrong direction; expected one of: 'left', 'right', 'down', 'up'."
+            )
 
         info: Dict[str, Any]
         reward, terminated, truncated, info = (

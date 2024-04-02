@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Optional, Tuple, overload, Sequence
 
 import gymnasium as gym

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, overload, Sequence, Optional
 
 from langchain_core.agents import AgentAction, AgentStep
