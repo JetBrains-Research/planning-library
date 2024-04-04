@@ -20,9 +20,14 @@ from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from ...action_executors import BaseActionExecutor
-from .components.actors import BaseActor
-from .components.evaluators import ReflexionEvaluator
-from .components.self_reflections import BaseSelfReflection
+from .components import (
+    ReflexionActor,
+    ReflexionSelfReflection,
+    ReflexionEvaluator,
+    ReflexionEvaluatorInput,
+    ReflexionActorInput,
+    ReflexionSelfReflectionInput,
+)
 
 
 class ReflexionState(TypedDict):
@@ -30,7 +35,6 @@ class ReflexionState(TypedDict):
 
     inputs: Dict[str, Any]
     agent_outcome: Optional[Union[List[AgentAction], AgentAction, AgentFinish]]
-    evaluator_score: Any
     evaluator_should_continue: Optional[bool]
     self_reflection_memory: BaseChatMessageHistory
     self_reflections: List[BaseMessage]
@@ -45,7 +49,6 @@ class ReflexionNodes:
     ) -> ReflexionState:
         """The entry node in the graph. Initializes the state correctly."""
         state["agent_outcome"] = None
-        state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
         state["self_reflection_memory"] = (
             ChatMessageHistory() if memory is None else memory
@@ -62,7 +65,6 @@ class ReflexionNodes:
     ) -> ReflexionState:
         """The first node that gets called after at least one iteration. Handles the advance of the loop interation correctly."""
         state["agent_outcome"] = None
-        state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
         state["intermediate_steps"] = []
         state["iteration"] += 1
@@ -74,23 +76,27 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def act(state: ReflexionState, actor: BaseActor) -> ReflexionState:
+    def act(state: ReflexionState, actor: ReflexionActor) -> ReflexionState:
         """Synchronous version of calling an agent and returning its result."""
-        agent_outcome = actor.act(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            self_reflections=state["self_reflections"],
+        agent_outcome = actor.invoke(
+            ReflexionActorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                self_reflections=state["self_reflections"],
+            )
         )
         state["agent_outcome"] = agent_outcome
         return state
 
     @staticmethod
-    async def aact(state: ReflexionState, actor: BaseActor) -> ReflexionState:
+    async def aact(state: ReflexionState, actor: ReflexionActor) -> ReflexionState:
         """Asynchronous version of calling an agent and returning its result."""
-        agent_outcome = await actor.aact(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            self_reflections=state["self_reflections"],
+        agent_outcome = await actor.ainvoke(
+            ReflexionActorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                self_reflections=state["self_reflections"],
+            )
         )
 
         state["agent_outcome"] = agent_outcome
@@ -158,12 +164,13 @@ class ReflexionNodes:
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
-        value, should_continue = evaluator.evaluate(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
+        should_continue = evaluator.invoke(
+            ReflexionEvaluatorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
-        state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
@@ -176,47 +183,50 @@ class ReflexionNodes:
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
 
-        value, should_continue = await evaluator.aevaluate(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
+        should_continue = await evaluator.ainvoke(
+            ReflexionEvaluatorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
-        state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
     @staticmethod
     def self_reflect(
-        state: ReflexionState, self_reflection: BaseSelfReflection
+        state: ReflexionState, self_reflection: ReflexionSelfReflection
     ) -> ReflexionState:
         """Synchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
 
-        reflection = self_reflection.self_reflect(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
-            evaluator_score=state["evaluator_score"],
+        reflection = self_reflection.invoke(
+            ReflexionSelfReflectionInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
         state["self_reflection_memory"].add_messages(reflection)
         return state
 
     @staticmethod
     async def aself_reflect(
-        state: ReflexionState, self_reflection: BaseSelfReflection
+        state: ReflexionState, self_reflection: ReflexionSelfReflection
     ) -> ReflexionState:
         """Asynchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
 
-        reflection = await self_reflection.aself_reflect(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
-            evaluator_score=state["evaluator_score"],
+        reflection = await self_reflection.ainvoke(
+            ReflexionSelfReflectionInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
         await state["self_reflection_memory"].aadd_messages(reflection)
         return state
@@ -257,9 +267,9 @@ class ReflexionEdges:
 
 
 def create_reflexion_graph(
-    actor: BaseActor,
+    actor: ReflexionActor,
     evaluator: ReflexionEvaluator,
-    self_reflection: BaseSelfReflection,
+    self_reflection: ReflexionSelfReflection,
     action_executor: BaseActionExecutor,
     max_iterations: Optional[int],
     reset_environment: Optional[Callable[[Dict[str, Any]], None]],
