@@ -4,13 +4,16 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
-from typing import Sequence, Optional
-from planning_library.utils import CustomAgentComponents
+from typing import Sequence, Optional, Union
 from planning_library.components import AgentComponent
 from typing import Tuple, Dict, Any, List
 from langchain_core.agents import AgentAction
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
+from planning_library.function_calling_parsers import (
+    BaseFunctionCallingSingleActionParser,
+    BaseFunctionCallingMultiActionParser,
+)
 
 
 class ReflexionActorInput(TypedDict):
@@ -56,11 +59,16 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
         cls,
         llm: BaseChatModel,
         tools: Sequence[BaseTool],
-        agent_type: str,
         prompt: Optional[ChatPromptTemplate] = None,
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
-        components: Optional[CustomAgentComponents] = None,
+        parser: Optional[
+            Union[
+                BaseFunctionCallingSingleActionParser,
+                BaseFunctionCallingMultiActionParser,
+            ]
+        ] = None,
+        parser_name: Optional[str] = None,
     ) -> ReflexionActor:
         if prompt is None:
             if user_message is None:
@@ -78,12 +86,6 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
         if missing_vars:
             raise ValueError(f"Prompt missing required variables: {missing_vars}")
 
-        return ReflexionActor(
-            agent=cls.create_agent(
-                llm=llm,
-                tools=tools,
-                agent_type=agent_type,
-                prompt=prompt,
-                components=components,
-            )
+        return cls.create_agent(
+            llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name
         )

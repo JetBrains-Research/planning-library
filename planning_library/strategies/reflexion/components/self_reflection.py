@@ -5,14 +5,22 @@ from langchain_core.language_models import BaseChatModel
 from textwrap import dedent
 from typing import Optional, Sequence, Tuple, Dict, Any, List
 from langchain_core.messages import BaseMessage
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableLambda
 from typing_extensions import TypedDict
+from planning_library.function_calling_parsers import ParserRegistry
+from functools import partial
 
 
 class ReflexionSelfReflectionInput(TypedDict):
     inputs: Dict[str, Any]
     intermediate_steps: List[Tuple[AgentAction, str]]
     agent_outcome: AgentFinish
+
+
+class PreprocessedReflexionSelfReflectionInput(TypedDict):
+    inputs: Dict[str, Any]
+    intermediate_steps: List[BaseMessage]
+    agent_outcome: str
 
 
 class ReflexionSelfReflection(
@@ -46,6 +54,25 @@ class ReflexionSelfReflection(
             ]
         )
 
+    @staticmethod
+    def _preprocess_input(
+        inputs: ReflexionSelfReflectionInput,
+        parser,
+        parser_name,
+    ) -> PreprocessedReflexionSelfReflectionInput:
+        if parser is None:
+            assert parser_name is not None
+            parser = ParserRegistry.get_parser(parser_name)
+
+        preprocessed_inputs = parser.format_inputs(inputs)
+        return {
+            "inputs": preprocessed_inputs["inputs"],
+            "agent_outcome": preprocessed_inputs["agent_outcome"].return_values[
+                "output"
+            ],
+            "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
+        }
+
     @classmethod
     def create(
         cls,
@@ -53,6 +80,8 @@ class ReflexionSelfReflection(
         prompt: Optional[ChatPromptTemplate] = None,
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
+        parser=None,
+        parser_name=None,
     ) -> "ReflexionSelfReflection":
         if prompt is None:
             if user_message is None:
@@ -69,6 +98,12 @@ class ReflexionSelfReflection(
         if missing_vars:
             raise ValueError(f"Prompt missing required variables: {missing_vars}")
 
-        runnable: Runnable = prompt | llm
+        runnable: Runnable = (
+            RunnableLambda(
+                partial(cls._preprocess_input, parser=parser, parser_name=parser_name)
+            )
+            | prompt
+            | llm
+        )
 
         return ReflexionSelfReflection(runnable=runnable)

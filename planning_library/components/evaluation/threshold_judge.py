@@ -12,11 +12,11 @@ class ThresholdJudge(BaseComponent[Tuple[InputType, float], bool]):
         inputs: Tuple[InputType, float],
         run_manager: Optional[CallbackManager],
     ) -> bool:
-        return inputs[1] > self.threshold
+        return inputs[1] < self.threshold
 
     async def ainvoke(
         self,
         inputs: Tuple[InputType, float],
         run_manager: Optional[AsyncCallbackManager],
     ) -> bool:
-        return inputs[1] > self.threshold
+        return inputs[1] < self.threshold

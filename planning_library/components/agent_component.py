@@ -9,12 +9,47 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langchain_core.prompts import ChatPromptTemplate
 from planning_library.utils import (
-    create_custom_agent,
-    CustomAgentComponents,
     convert_runnable_to_agent,
 )
-from langchain.agents import create_openai_functions_agent
-from langchain.agents import create_openai_tools_agent
+from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
+from langchain_core.runnables import RunnableLambda, Runnable
+from planning_library.function_calling_parsers import (
+    BaseFunctionCallingSingleActionParser,
+    BaseFunctionCallingMultiActionParser,
+    ParserRegistry,
+)
+
+
+class AgentFactory:
+    @staticmethod
+    def create_agent(
+        llm: BaseChatModel,
+        tools: Sequence[BaseTool],
+        prompt: ChatPromptTemplate,
+        parser: Optional[
+            Union[
+                BaseFunctionCallingSingleActionParser,
+                BaseFunctionCallingMultiActionParser,
+            ]
+        ] = None,
+        parser_name: Optional[str] = None,
+    ) -> Union[RunnableAgent, RunnableMultiActionAgent]:
+        if parser is None:
+            if parser_name is None:
+                raise ValueError(
+                    "Either parser or parser_name should be provided to instantiate an agent."
+                )
+            parser = ParserRegistry.get_parser(parser_name)
+
+        llm_with_tools = llm.bind(tools=[parser.prepare_tool(tool) for tool in tools])
+        runnable: Runnable = (
+            RunnableLambda(parser.format_inputs)
+            | prompt
+            | llm_with_tools
+            | parser.output_parser
+        )
+        agent = convert_runnable_to_agent(runnable)
+        return agent
 
 
 class AgentComponent(
@@ -43,23 +78,21 @@ class AgentComponent(
         cls,
         llm: BaseChatModel,
         tools: Sequence[BaseTool],
-        agent_type: str,
         prompt: ChatPromptTemplate,
-        components: Optional[CustomAgentComponents] = None,
+        parser: Optional[
+            Union[
+                BaseFunctionCallingSingleActionParser,
+                BaseFunctionCallingMultiActionParser,
+            ]
+        ] = None,
+        parser_name: Optional[str] = None,
     ) -> "AgentComponent[InputType]":
-        if agent_type == "openai_tools":
-            agent = create_openai_tools_agent(llm=llm, tools=tools, prompt=prompt)
-
-        elif agent_type == "openai_functions":
-            agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
-
-        elif agent_type == "custom":
-            if components is None:
-                raise ValueError("`components` is required to create a custom agent.")
-            agent = create_custom_agent(
-                llm=llm, tools=tools, prompt=prompt, components=components
+        return cls(
+            agent=AgentFactory.create_agent(
+                llm=llm,
+                tools=tools,
+                prompt=prompt,
+                parser=parser,
+                parser_name=parser_name,
             )
-        else:
-            raise ValueError(f"Agent type {agent_type} is currently not supported.")
-
-        return cls(agent=convert_runnable_to_agent(agent))
+        )
