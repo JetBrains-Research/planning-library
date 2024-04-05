@@ -1,15 +1,13 @@
-from planning_library.components import RunnableComponent
 from planning_library.components.evaluation import EvaluatorComponent
-from typing import Tuple, Dict, Any, List, Optional
+from typing import Tuple, Dict, Any, List, Optional, Generic, Type
+from planning_library.components.base_component import OutputType
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.language_models import BaseChatModel
-from langchain_core.runnables import Runnable, RunnableLambda
+from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
-from planning_library.primitives.output_parsers import SimpleEvaluateOutputParser
-from planning_library.components.evaluation import ThresholdJudge
 from planning_library.function_calling_parsers import ParserRegistry
 from typing_extensions import TypedDict
 from functools import partial
@@ -27,10 +25,14 @@ class PreprocessedReflexionEvaluatorInput(TypedDict):
     agent_outcome: str
 
 
-class ReflexionEvaluator(EvaluatorComponent[ReflexionEvaluatorInput]):
-    @staticmethod
-    def _create_prompt(
-        system_message: Optional[str], user_message: str
+class ReflexionEvaluator(
+    Generic[OutputType], EvaluatorComponent[ReflexionEvaluatorInput, OutputType]
+):
+    required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__)
+
+    @classmethod
+    def _create_default_prompt(
+        cls, system_message: Optional[str], user_message: str
     ) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning assistant that judges whether the episodes result in success or failure."
@@ -48,7 +50,7 @@ class ReflexionEvaluator(EvaluatorComponent[ReflexionEvaluatorInput]):
                 (
                     "human",
                     dedent("""
-                     Take your time and comment your decision, but make sure to always output either 0 or 1 in the end, where 0 would mean 'the episode ended in failure' and 1 would mean 'the episode ended in success'. 
+                     Take your time and comment your decision, but make sure to always output number between 0 and 1 in the end, where 0 would mean 'the episode ended in failure' and 1 would mean 'the episode ended in success'. 
                      Use the following format: [[number]].
 
                      Your verdict:
@@ -74,43 +76,9 @@ class ReflexionEvaluator(EvaluatorComponent[ReflexionEvaluatorInput]):
             "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
         }
 
-    @staticmethod
-    def _create_output_parser() -> BaseOutputParser[float]:
-        return SimpleEvaluateOutputParser()
-
-    @classmethod
-    def create_from_runnable(
-        cls, runnable: Runnable[ReflexionEvaluatorInput, float], threshold: float
-    ) -> "ReflexionEvaluator":
-        backbone = RunnableComponent(runnable=runnable)
-        judge = ThresholdJudge(threshold)
-        return cls(backbone=backbone, judge=judge)
-
-    @classmethod
-    def create_from_prompt_and_llm(
-        cls,
-        llm: BaseChatModel,
-        prompt: ChatPromptTemplate,
-        threshold: float,
-        output_parser: Optional[BaseOutputParser[float]],
-        parser=None,
-        parser_name=None,
-    ) -> "ReflexionEvaluator":
-        if output_parser is None:
-            output_parser = cls._create_output_parser()
-        runnable: Runnable = (
-            RunnableLambda(
-                partial(cls._preprocess_input, parser=parser, parser_name=parser_name)
-            )
-            | prompt
-            | llm
-            | output_parser
-        )
-        return cls.create_from_runnable(runnable=runnable, threshold=threshold)
-
     @classmethod
     def create(
-        cls,
+        cls: Type["ReflexionEvaluator"],
         llm: BaseChatModel,
         threshold: float,
         prompt: Optional[ChatPromptTemplate] = None,
@@ -119,27 +87,25 @@ class ReflexionEvaluator(EvaluatorComponent[ReflexionEvaluatorInput]):
         output_parser: Optional[BaseOutputParser[float]] = None,
         parser=None,
         parser_name=None,
-    ) -> "ReflexionEvaluator":
-        if prompt is None:
-            if user_message is None:
-                raise ValueError(
-                    "Either `prompt` or `user_message` are required to create an agent."
-                )
-            prompt = cls._create_prompt(
-                system_message=system_message, user_message=user_message
-            )
-
-        missing_vars = set(ReflexionEvaluatorInput.__annotations__).difference(
-            prompt.input_variables
-        )
-        if missing_vars:
-            raise ValueError(f"Prompt missing required variables: {missing_vars}")
-
-        return cls.create_from_prompt_and_llm(
+    ) -> "ReflexionEvaluator[float]":
+        evaluator = cls.create_threshold_evaluator(
             llm=llm,
             threshold=threshold,
+            threshold_mode="leq",
             prompt=prompt,
+            user_message=user_message,
+            system_message=system_message,
             output_parser=output_parser,
-            parser=parser,
-            parser_name=parser_name,
         )
+
+        if hasattr(evaluator.backbone, "runnable"):
+            evaluator.backbone.runnable = (
+                RunnableLambda(
+                    partial(
+                        cls._preprocess_input, parser=parser, parser_name=parser_name
+                    )
+                )
+                | evaluator.backbone.runnable
+            )
+        # TODO: fix typing here
+        return evaluator

@@ -3,7 +3,7 @@ from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.language_models import BaseChatModel
 from textwrap import dedent
-from typing import Optional, Sequence, Tuple, Dict, Any, List
+from typing import Optional, Sequence, Tuple, Dict, Any, List, Type
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable, RunnableLambda
 from typing_extensions import TypedDict
@@ -26,9 +26,9 @@ class PreprocessedReflexionSelfReflectionInput(TypedDict):
 class ReflexionSelfReflection(
     RunnableComponent[ReflexionSelfReflectionInput, Sequence[BaseMessage]]
 ):
-    @staticmethod
-    def _create_prompt(
-        system_message: Optional[str], user_message: str
+    @classmethod
+    def _create_default_prompt(
+        cls, system_message: Optional[str], user_message: str
     ) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can self-reflect on their shortcomings when solving reasoning tasks."
@@ -75,7 +75,7 @@ class ReflexionSelfReflection(
 
     @classmethod
     def create(
-        cls,
+        cls: Type["ReflexionSelfReflection"],
         llm: BaseChatModel,
         prompt: Optional[ChatPromptTemplate] = None,
         user_message: Optional[str] = None,
@@ -83,20 +83,9 @@ class ReflexionSelfReflection(
         parser=None,
         parser_name=None,
     ) -> "ReflexionSelfReflection":
-        if prompt is None:
-            if user_message is None:
-                raise ValueError(
-                    "Either `prompt` or `user_message` are required to create an agent."
-                )
-            prompt = cls._create_prompt(
-                system_message=system_message, user_message=user_message
-            )
-
-        missing_vars = set(ReflexionSelfReflectionInput.__annotations__).difference(
-            prompt.input_variables
+        prompt = cls._process_prompt(
+            prompt=prompt, user_message=user_message, system_message=system_message
         )
-        if missing_vars:
-            raise ValueError(f"Prompt missing required variables: {missing_vars}")
 
         runnable: Runnable = (
             RunnableLambda(

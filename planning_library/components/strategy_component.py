@@ -17,7 +17,7 @@ class StrategyComponent(BaseComponent[InputType, Dict[str, Any]]):
         run_manager: Optional[CallbackManager] = None,
     ) -> Dict[str, Any]:
         outputs = self.strategy.invoke(
-            inputs,
+            dict(inputs),
             config={"callbacks": run_manager} if run_manager else {},
         )
         return outputs
@@ -28,7 +28,7 @@ class StrategyComponent(BaseComponent[InputType, Dict[str, Any]]):
         run_manager: Optional[AsyncCallbackManager] = None,
     ) -> Dict[str, Any]:
         outputs = await self.strategy.ainvoke(
-            inputs,
+            dict(inputs),
             config={"callbacks": run_manager} if run_manager else {},
         )
         return outputs

@@ -8,11 +8,12 @@ from typing import (
     Optional,
     Tuple,
     TypedDict,
+    Sequence,
     Union,
 )
 from langchain.memory import ChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, AIMessage
 
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.runnables import RunnableLambda
@@ -37,12 +38,25 @@ class ReflexionState(TypedDict):
     agent_outcome: Optional[Union[List[AgentAction], AgentAction, AgentFinish]]
     evaluator_should_continue: Optional[bool]
     self_reflection_memory: BaseChatMessageHistory
-    self_reflections: List[BaseMessage]
+    self_reflections: Sequence[BaseMessage]
     intermediate_steps: List[Tuple[AgentAction, str]]
     iteration: int
 
 
 class ReflexionNodes:
+    @staticmethod
+    def _format_self_reflections(
+        self_reflections: List[Tuple[str, str]],
+    ) -> Sequence[BaseMessage]:
+        result = []
+        for t in self_reflections:
+            if t[0] == "content":
+                content = t[1]
+                message = AIMessage(content=content)
+                result.append(message)
+
+        return result
+
     @staticmethod
     def init(
         state: ReflexionState, memory: Optional[BaseChatMessageHistory] = None
@@ -68,7 +82,10 @@ class ReflexionNodes:
         state["evaluator_should_continue"] = None
         state["intermediate_steps"] = []
         state["iteration"] += 1
-        state["self_reflections"] = state["self_reflection_memory"].messages
+        # TODO: why does memory return list of tuples instead of messages as expected? some serialization stuff?
+        state["self_reflections"] = ReflexionNodes._format_self_reflections(
+            state["self_reflection_memory"].messages
+        )
 
         if reset_environment:
             reset_environment(state["inputs"])

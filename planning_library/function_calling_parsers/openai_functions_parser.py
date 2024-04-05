@@ -8,8 +8,8 @@ from langchain_core.utils.function_calling import convert_to_openai_function
 
 from planning_library.function_calling_parsers.base_parser import (
     BaseFunctionCallingSingleActionParser,
-    Inputs,
-    ProcessedInputs,
+    ProcessedAgentInputs,
+    AgentInputs,
 )
 from planning_library.function_calling_parsers.parser_registry import ParserRegistry
 
@@ -27,13 +27,13 @@ class OpenAIFunctionsParser(BaseFunctionCallingSingleActionParser):
 
     def format_inputs(
         self,
-        inputs: Inputs,
-    ) -> ProcessedInputs:
-        intermediate_steps = inputs["intermediate_steps"]
-        del inputs["intermediate_steps"]
+        inputs: AgentInputs,
+    ) -> ProcessedAgentInputs:
         return {
-            **inputs,
-            "agent_scratchpad": self._format_intermediate_steps(intermediate_steps),
+            **inputs,  # type: ignore[typeddict-unknown-key]
+            "agent_scratchpad": self._format_intermediate_steps(
+                inputs["intermediate_steps"]
+            ),
         }
 
     def prepare_tool(self, tool: BaseTool) -> Any:

@@ -22,7 +22,6 @@ from langchain_core.callbacks import (
 from langchain_core.pydantic_v1 import root_validator
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
-from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from planning_library.action_executors import BaseActionExecutor
 from planning_library.utils.actions_utils import get_tools_maps
@@ -175,7 +174,5 @@ class BaseCustomStrategy(Chain, ABC):
         return {key: [output[key] for output in outputs] for key in outputs[0]}
 
 
-class BaseLangGraphStrategy(ABC):
-    @staticmethod
-    @abstractmethod
-    def create(agent: Runnable, tools: Sequence[BaseTool], **kwargs) -> Pregel: ...
+# TODO: what should the interface be?
+class BaseLangGraphStrategy(ABC): ...

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import Optional, List, Union, Sequence
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
@@ -74,11 +73,13 @@ class AgentComponent(
         return outputs
 
     @classmethod
-    def create_agent(
+    def create(
         cls,
         llm: BaseChatModel,
         tools: Sequence[BaseTool],
-        prompt: ChatPromptTemplate,
+        prompt: Optional[ChatPromptTemplate] = None,
+        user_message: Optional[str] = None,
+        system_message: Optional[str] = None,
         parser: Optional[
             Union[
                 BaseFunctionCallingSingleActionParser,
@@ -87,6 +88,10 @@ class AgentComponent(
         ] = None,
         parser_name: Optional[str] = None,
     ) -> "AgentComponent[InputType]":
+        prompt = cls._process_prompt(
+            prompt=prompt, user_message=user_message, system_message=system_message
+        )
+
         return cls(
             agent=AgentFactory.create_agent(
                 llm=llm,

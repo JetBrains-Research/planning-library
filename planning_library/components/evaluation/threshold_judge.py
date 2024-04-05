@@ -1,22 +1,42 @@
-from ..base_component import BaseComponent, InputType
-from typing import Tuple, Optional
+from ..base_component import BaseComponent
+from typing import Optional
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
+from planning_library.components.base_component import InputType
 
 
-class ThresholdJudge(BaseComponent[Tuple[InputType, float], bool]):
+class LeqThresholdJudge(BaseComponent[InputType, bool]):
     def __init__(self, threshold: float):
         self.threshold = threshold
 
     def invoke(
         self,
-        inputs: Tuple[InputType, float],
-        run_manager: Optional[CallbackManager],
+        inputs: InputType,
+        run_manager: Optional[CallbackManager] = None,
     ) -> bool:
-        return inputs[1] < self.threshold
+        return inputs["backbone_output"] <= self.threshold
 
     async def ainvoke(
         self,
-        inputs: Tuple[InputType, float],
-        run_manager: Optional[AsyncCallbackManager],
+        inputs: InputType,
+        run_manager: Optional[AsyncCallbackManager] = None,
     ) -> bool:
-        return inputs[1] < self.threshold
+        return inputs["backbone_output"] <= self.threshold
+
+
+class GeqThresholdJudge(BaseComponent[InputType, bool]):
+    def __init__(self, threshold: float):
+        self.threshold = threshold
+
+    def invoke(
+        self,
+        inputs: InputType,
+        run_manager: Optional[CallbackManager] = None,
+    ) -> bool:
+        return inputs["backbone_output"] >= self.threshold
+
+    async def ainvoke(
+        self,
+        inputs: InputType,
+        run_manager: Optional[AsyncCallbackManager] = None,
+    ) -> bool:
+        return inputs["backbone_output"] >= self.threshold
