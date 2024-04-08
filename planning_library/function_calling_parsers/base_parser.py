@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple
+from typing import List, Tuple, Sequence
+from langchain_core.language_models import BaseChatModel
 from langchain.agents.agent import AgentOutputParser, MultiActionAgentOutputParser
 from langchain_core.agents import AgentAction
 from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
 
@@ -19,10 +21,12 @@ class BaseFunctionCallingParser(ABC):
     name: str
 
     @abstractmethod
-    def format_inputs(self, inputs: AgentInputs) -> ProcessedAgentInputs: ...
+    def prepare_llm(
+        self, llm: BaseChatModel, tools: Sequence[BaseTool]
+    ) -> Runnable: ...
 
     @abstractmethod
-    def prepare_tool(self, tool: BaseTool) -> Any: ...
+    def format_inputs(self, inputs: AgentInputs) -> ProcessedAgentInputs: ...
 
 
 class BaseFunctionCallingSingleActionParser(BaseFunctionCallingParser, ABC):

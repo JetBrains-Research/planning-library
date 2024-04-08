@@ -1,8 +1,10 @@
-from typing import Any, List, Tuple
+from typing import List, Tuple, Sequence
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain_core.messages import BaseMessage
 from langchain_core.agents import AgentAction
+from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_function
 
@@ -36,5 +38,5 @@ class OpenAIFunctionsParser(BaseFunctionCallingSingleActionParser):
             ),
         }
 
-    def prepare_tool(self, tool: BaseTool) -> Any:
-        return convert_to_openai_function(tool)
+    def prepare_llm(self, llm: BaseChatModel, tools: Sequence[BaseTool]) -> Runnable:
+        return llm.bind(functions=[convert_to_openai_function(tool) for tool in tools])

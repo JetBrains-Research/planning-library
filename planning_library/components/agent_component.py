@@ -40,7 +40,8 @@ class AgentFactory:
                 )
             parser = ParserRegistry.get_parser(parser_name)
 
-        llm_with_tools = llm.bind(tools=[parser.prepare_tool(tool) for tool in tools])
+        llm_with_tools = parser.prepare_llm(llm=llm, tools=tools)
+
         runnable: Runnable = (
             RunnableLambda(parser.format_inputs)
             | prompt
