@@ -2,6 +2,7 @@ from typing import Optional, Dict, Callable, Awaitable
 from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.language_models import BaseChatModel
 from .base_component import InputType, OutputType, BaseComponent
 
@@ -11,10 +12,21 @@ class RunnableComponent(BaseComponent[InputType, OutputType]):
         self.runnable = runnable
 
     @classmethod
-    def create_from_prompt_and_llm(
-        cls, prompt: ChatPromptTemplate, llm: BaseChatModel
+    def create_from_steps(
+        cls,
+        llm: BaseChatModel,
+        output_parser: Optional[BaseOutputParser] = None,
+        prompt: Optional[ChatPromptTemplate] = None,
+        user_message: Optional[str] = None,
+        system_message: Optional[str] = None,
     ) -> "RunnableComponent":
-        return RunnableComponent(runnable=prompt | llm)
+        prompt = cls._process_prompt(
+            prompt=prompt, user_message=user_message, system_message=system_message
+        )
+        runnable = prompt | llm
+        if output_parser is not None:
+            runnable = runnable | output_parser
+        return RunnableComponent(runnable)
 
     def add_input_preprocessing(
         self,

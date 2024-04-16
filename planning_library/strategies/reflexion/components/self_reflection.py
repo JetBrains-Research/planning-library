@@ -93,7 +93,7 @@ class ReflexionSelfReflection(
         )
 
         # TODO: figure out typing here
-        self_reflection: ReflexionSelfReflection = cls.create_from_prompt_and_llm(  # type: ignore[assignment]
+        self_reflection: ReflexionSelfReflection = cls.create_from_steps(  # type: ignore[assignment]
             prompt=prompt, llm=llm
         )
         self_reflection.add_input_preprocessing(_preprocess_input)

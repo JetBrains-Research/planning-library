@@ -12,15 +12,12 @@ from typing import (
 )
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
-from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
 from langchain.chains.base import Chain
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import (
     AsyncCallbackManagerForChainRun,
     CallbackManagerForChainRun,
 )
-from langchain_core.pydantic_v1 import root_validator
-from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 
 from planning_library.action_executors import BaseActionExecutor
@@ -28,12 +25,15 @@ from planning_library.utils.actions_utils import get_tools_maps
 
 
 class BaseCustomStrategy(Chain, ABC):
-    agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]
     action_executor: BaseActionExecutor
     return_intermediate_steps: bool = False
     return_finish_log: bool = False
     max_iterations: int = 15
     verbose: bool = True
+
+    @abstractmethod
+    @property
+    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]: ...
 
     @property
     def tools(self) -> Sequence[BaseTool]:
@@ -52,30 +52,16 @@ class BaseCustomStrategy(Chain, ABC):
         else:
             return self.agent.return_values
 
-    @root_validator(pre=True)
-    def validate_runnable_agent(cls, values: Dict) -> Dict:
-        """Convert runnable to agent if passed in."""
-        agent = values["agent"]
-        if isinstance(agent, Runnable):
-            try:
-                output_type = agent.OutputType
-            except Exception as _:
-                multi_action = False
-            else:
-                multi_action = output_type == Union[List[AgentAction], AgentFinish]
-
-            if multi_action:
-                values["agent"] = RunnableMultiActionAgent(runnable=agent)
-            else:
-                values["agent"] = RunnableAgent(runnable=agent)
-        return values
-
-    @staticmethod
+    @classmethod
     @abstractmethod
     def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
+        cls,
         tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
+        return_intermediate_steps: bool = False,
+        return_finish_log: bool = False,
+        max_iterations: int = 15,
+        verbose: bool = True,
         **kwargs,
     ) -> "BaseCustomStrategy": ...
 

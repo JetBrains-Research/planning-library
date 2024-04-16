@@ -2,6 +2,7 @@ from typing import Optional, Dict, Generic, Type, Callable, Awaitable
 
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.runnables import Runnable
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from ..base_component import BaseComponent, InputType, OutputType
@@ -68,6 +69,26 @@ class EvaluatorComponent(
         system_message: Optional[str] = None,
         output_parser: Optional[BaseOutputParser[float]] = None,
     ) -> "EvaluatorComponent[InputType, float]":
+        prompt = cls._process_prompt(
+            prompt=prompt, user_message=user_message, system_message=system_message
+        )
+
+        if output_parser is None:
+            output_parser = SimpleEvaluateOutputParser()
+
+        return cls.create_threshold_evaluator_from_runnable(
+            runnable=prompt | llm | output_parser,
+            threshold=threshold,
+            threshold_mode=threshold_mode,
+        )
+
+    @classmethod
+    def create_threshold_evaluator_from_runnable(
+        cls: Type["EvaluatorComponent"],
+        runnable: Runnable[InputType, OutputType],
+        threshold: float,
+        threshold_mode: str,
+    ) -> "EvaluatorComponent[InputType, float]":
         if threshold_mode == "leq":
             judge: BaseComponent[Dict[str, float], bool] = LeqThresholdJudge(
                 threshold=threshold
@@ -79,12 +100,5 @@ class EvaluatorComponent(
                 f"Unknown `threshold_mode` {threshold_mode} when initializing {cls.__name__}."
             )
 
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
-
-        if output_parser is None:
-            output_parser = SimpleEvaluateOutputParser()
-
-        backbone = RunnableComponent(runnable=prompt | llm | output_parser)
+        backbone = RunnableComponent(runnable)
         return cls(backbone=backbone, judge=judge)

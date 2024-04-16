@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from langchain_core.agents import AgentFinish, AgentAction, AgentStep
 from langchain_core.callbacks import (
     CallbackManagerForChainRun,
@@ -16,16 +18,34 @@ class SimpleStrategy(BaseCustomStrategy):
     """Simple strategy akin to langchain.agents.AgentExecutor:
     calls agent in a loop until either AgentFinish is produced or early stopping condition in reached."""
 
-    @staticmethod
+    agent: BaseSingleActionAgent | BaseMultiActionAgent
+
+    @classmethod
     def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
+        cls,
         tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
+        return_intermediate_steps: bool = False,
+        return_finish_log: bool = False,
+        max_iterations: int = 15,
+        verbose: bool = True,
+        agent: Optional[Union[BaseSingleActionAgent, BaseMultiActionAgent]] = None,
         **kwargs,
     ) -> "SimpleStrategy":
         if action_executor is None:
             action_executor = DefaultActionExecutor(tools=tools)
-        return SimpleStrategy(agent=agent, action_executor=action_executor, **kwargs)
+
+        if agent is None:
+            raise ValueError("Default agent is currently not supported.")
+
+        return SimpleStrategy(
+            agent=agent,
+            action_executor=action_executor,
+            return_intermediate_steps=return_intermediate_steps,
+            return_finish_log=return_finish_log,
+            max_iterations=max_iterations,
+            verbose=verbose,
+        )
 
     def _run_strategy(
         self,

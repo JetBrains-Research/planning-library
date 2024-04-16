@@ -3,12 +3,17 @@ from langchain_core.callbacks import (
     CallbackManager,
     AsyncCallbackManager,
 )
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Union
 from langchain_core.agents import AgentAction, AgentFinish
+from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from planning_library.strategies import BaseCustomStrategy
 
 
 class BaseADaPTExecutor(ABC):
+    @abstractmethod
+    @property
+    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]: ...
+
     @abstractmethod
     def execute(
         self,
@@ -27,6 +32,10 @@ class BaseADaPTExecutor(ABC):
 class StrategyADaPTExecutor(BaseADaPTExecutor):
     def __init__(self, strategy: BaseCustomStrategy):
         self._executor = strategy
+
+    @property
+    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]:
+        return self._executor.agent
 
     def _is_completed(self, outcome: AgentFinish) -> bool:
         return "task completed" in outcome.log.lower()

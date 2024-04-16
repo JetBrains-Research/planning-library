@@ -29,11 +29,19 @@ class ADaPTStrategy(BaseCustomStrategy):
     planner: BaseADaPTPlanner
     max_depth: int
 
+    @property
+    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]:
+        return self.executor.agent
+
     @staticmethod
     def create(
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent],
         tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
+        return_intermediate_steps: bool = False,
+        return_finish_log: bool = False,
+        max_iterations: int = 15,
+        verbose: bool = True,
+        agent: Optional[Union[BaseSingleActionAgent, BaseMultiActionAgent]] = None,
         planner_runnable: Optional[Runnable] = None,
         executor_strategy: Optional[BaseCustomStrategy] = None,
         max_depth: int = 20,
@@ -75,7 +83,6 @@ class ADaPTStrategy(BaseCustomStrategy):
             )
 
         strategy = ADaPTStrategy(
-            agent=agent,
             action_executor=action_executor,
             executor=StrategyADaPTExecutor(strategy=executor_strategy),
             planner=RunnableADaPTPlanner(runnable=planner_runnable),
