@@ -1,34 +1,10 @@
-from langchain_core.callbacks import (
-    CallbackManager,
-    AsyncCallbackManager,
-)
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from planning_library.strategies import BaseCustomStrategy
-from .base_component import InputType, BaseComponent
+from .base_component import InputType
+from .runnable_component import RunnableComponent
 
 
-class StrategyComponent(BaseComponent[InputType, Dict[str, Any]]):
+class StrategyComponent(RunnableComponent[InputType, Dict[str, Any]]):
     def __init__(self, strategy: BaseCustomStrategy):
-        self.strategy = strategy
-
-    def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
-    ) -> Dict[str, Any]:
-        outputs = self.strategy.invoke(
-            dict(inputs),
-            config={"callbacks": run_manager} if run_manager else {},
-        )
-        return outputs
-
-    async def ainvoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[AsyncCallbackManager] = None,
-    ) -> Dict[str, Any]:
-        outputs = await self.strategy.ainvoke(
-            dict(inputs),
-            config={"callbacks": run_manager} if run_manager else {},
-        )
-        return outputs
+        # TODO: typing: how to show that it's a runnable?
+        super().__init__(strategy)  # type: ignore[arg-type]

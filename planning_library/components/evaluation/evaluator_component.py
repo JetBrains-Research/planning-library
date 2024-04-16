@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Generic, Type
+from typing import Optional, Dict, Generic, Type, Callable, Awaitable
 
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from langchain_core.output_parsers import BaseOutputParser
@@ -20,6 +20,20 @@ class EvaluatorComponent(
     ):
         self.backbone = backbone
         self.judge = judge
+
+    def add_input_preprocessing(
+        self,
+        preprocess: Callable[[InputType], Dict],
+        apreprocess: Optional[Callable[[InputType], Awaitable[Dict]]] = None,
+    ) -> None:
+        self.backbone.add_input_preprocessing(preprocess, apreprocess)
+
+    def add_output_preprocessing(
+        self,
+        preprocess: Callable[[bool], bool],
+        apreprocess: Optional[Callable[[bool], Awaitable[bool]]] = None,
+    ) -> None:
+        self.judge.add_output_preprocessing(preprocess, apreprocess)
 
     def invoke(
         self,

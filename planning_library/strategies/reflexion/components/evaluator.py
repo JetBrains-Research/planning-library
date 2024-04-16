@@ -1,16 +1,19 @@
+from __future__ import annotations
 from planning_library.components.evaluation import EvaluatorComponent
 from typing import Tuple, Dict, Any, List, Optional, Generic, Type
 from planning_library.components.base_component import OutputType
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.language_models import BaseChatModel
-from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
-from planning_library.function_calling_parsers import ParserRegistry
+from planning_library.function_calling_parsers import (
+    ParserRegistry,
+    BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
+)
 from typing_extensions import TypedDict
-from functools import partial
 
 
 class ReflexionEvaluatorInput(TypedDict):
@@ -20,7 +23,6 @@ class ReflexionEvaluatorInput(TypedDict):
 
 
 class PreprocessedReflexionEvaluatorInput(TypedDict):
-    inputs: Dict[str, Any]
     intermediate_steps: List[BaseMessage]
     agent_outcome: str
 
@@ -28,7 +30,9 @@ class PreprocessedReflexionEvaluatorInput(TypedDict):
 class ReflexionEvaluator(
     Generic[OutputType], EvaluatorComponent[ReflexionEvaluatorInput, OutputType]
 ):
-    required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__)
+    required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__) - {
+        "inputs"
+    }
 
     @classmethod
     def _create_default_prompt(
@@ -44,7 +48,6 @@ class ReflexionEvaluator(
                     "human",
                     user_message,
                 ),
-                ("human", "Inputs: {inputs}"),
                 MessagesPlaceholder("intermediate_steps"),
                 ("human", "Answer: {agent_outcome}"),
                 (
@@ -59,23 +62,6 @@ class ReflexionEvaluator(
             ]
         )
 
-    @staticmethod
-    def _preprocess_input(
-        inputs: ReflexionEvaluatorInput, parser, parser_name
-    ) -> PreprocessedReflexionEvaluatorInput:
-        if parser is None:
-            assert parser_name is not None
-            parser = ParserRegistry.get_parser(parser_name)
-
-        preprocessed_inputs = parser.format_inputs(inputs)
-        return {
-            "inputs": preprocessed_inputs["inputs"],
-            "agent_outcome": preprocessed_inputs["agent_outcome"].return_values[
-                "output"
-            ],
-            "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
-        }
-
     @classmethod
     def create(
         cls: Type["ReflexionEvaluator"],
@@ -85,10 +71,31 @@ class ReflexionEvaluator(
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
         output_parser: Optional[BaseOutputParser[float]] = None,
-        parser=None,
-        parser_name=None,
+        parser: Optional[
+            BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser
+        ] = None,
+        parser_name: Optional[str] = None,
     ) -> "ReflexionEvaluator[float]":
-        evaluator = cls.create_threshold_evaluator(
+        def _preprocess_input(
+            inputs: ReflexionEvaluatorInput,
+        ) -> Dict:
+            # TODO: figure out typing here
+            nonlocal parser, parser_name
+            if parser is None:
+                assert parser_name is not None
+                parser = ParserRegistry.get_parser(parser_name)
+
+            preprocessed_inputs = parser.format_inputs(inputs)
+            return {
+                **preprocessed_inputs["inputs"],
+                "agent_outcome": preprocessed_inputs["agent_outcome"].return_values[  # type: ignore[typeddict-item]
+                    "output"
+                ],
+                "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
+            }
+
+        # TODO: fix typing here
+        evaluator: ReflexionEvaluator = cls.create_threshold_evaluator(  # type: ignore[assignment]
             llm=llm,
             threshold=threshold,
             threshold_mode="leq",
@@ -98,14 +105,6 @@ class ReflexionEvaluator(
             output_parser=output_parser,
         )
 
-        if hasattr(evaluator.backbone, "runnable"):
-            evaluator.backbone.runnable = (
-                RunnableLambda(
-                    partial(
-                        cls._preprocess_input, parser=parser, parser_name=parser_name
-                    )
-                )
-                | evaluator.backbone.runnable
-            )
-        # TODO: fix typing here
+        evaluator.add_input_preprocessing(_preprocess_input)
+
         return evaluator

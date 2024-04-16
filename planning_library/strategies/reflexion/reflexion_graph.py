@@ -84,7 +84,7 @@ class ReflexionNodes:
         state["iteration"] += 1
         # TODO: why does memory return list of tuples instead of messages as expected? some serialization stuff?
         state["self_reflections"] = ReflexionNodes._format_self_reflections(
-            state["self_reflection_memory"].messages
+            state["self_reflection_memory"].messages  # type: ignore[arg-type]
         )
 
         if reset_environment:

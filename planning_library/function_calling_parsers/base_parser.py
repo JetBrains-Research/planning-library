@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Sequence
+from typing import List, Tuple, Sequence, Dict, Any
 from langchain_core.language_models import BaseChatModel
 from langchain.agents.agent import AgentOutputParser, MultiActionAgentOutputParser
 from langchain_core.agents import AgentAction
@@ -10,10 +10,12 @@ from typing_extensions import TypedDict
 
 
 class AgentInputs(TypedDict):
+    inputs: Dict[str, Any]
     intermediate_steps: List[Tuple[AgentAction, str]]
 
 
 class ProcessedAgentInputs(TypedDict):
+    inputs: Dict[str, Any]
     agent_scratchpad: List[BaseMessage]
 
 

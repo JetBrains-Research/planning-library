@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, List, Union, Sequence
+from typing import Optional, List, Union, Sequence, Callable, Dict, Awaitable
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from .base_component import InputType, BaseComponent
@@ -55,8 +55,47 @@ class AgentFactory:
 class AgentComponent(
     BaseComponent[InputType, Union[List[AgentAction], AgentAction, AgentFinish]]
 ):
-    def __init__(self, agent: BaseSingleActionAgent | BaseMultiActionAgent):
+    def __init__(
+        self,
+        agent: BaseSingleActionAgent | BaseMultiActionAgent,
+        flatten_inputs: bool = True,
+    ):
         self.agent = agent
+        if flatten_inputs:
+            self.add_input_preprocessing(
+                lambda x: {
+                    **x["inputs"],
+                    **{key: x[key] for key in x if key != "inputs"},
+                }
+            )
+
+    def add_input_preprocessing(
+        self,
+        preprocess: Callable[[InputType], Dict],
+        apreprocess: Optional[Callable[[InputType], Awaitable[Dict]]] = None,
+    ) -> None:
+        if hasattr(self.agent, "runnable"):
+            self.agent.runnable = (
+                RunnableLambda(preprocess, afunc=apreprocess) | self.agent.runnable
+            )
+
+    def add_output_preprocessing(
+        self,
+        preprocess: Callable[
+            [Union[List[AgentAction], AgentAction, AgentFinish]],
+            Union[List[AgentAction], AgentAction, AgentFinish],
+        ],
+        apreprocess: Optional[
+            Callable[
+                [Union[List[AgentAction], AgentAction, AgentFinish]],
+                Awaitable[Union[List[AgentAction], AgentAction, AgentFinish]],
+            ]
+        ] = None,
+    ) -> None:
+        if hasattr(self.agent, "runnable"):
+            self.agent.runnable = self.agent.runnable | RunnableLambda(
+                preprocess, afunc=apreprocess
+            )
 
     def invoke(
         self,

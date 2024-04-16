@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Optional, Mapping, Set
+from typing import Generic, TypeVar, Optional, Mapping, Set, Dict, Callable, Awaitable
 from abc import ABC, abstractmethod
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from langchain_core.prompts import ChatPromptTemplate
@@ -41,6 +41,18 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
             )
 
         return prompt
+
+    def add_input_preprocessing(
+        self,
+        preprocess: Callable[[InputType], Dict],
+        apreprocess: Optional[Callable[[InputType], Awaitable[Dict]]] = None,
+    ) -> None: ...
+
+    def add_output_preprocessing(
+        self,
+        preprocess: Callable[[OutputType], OutputType],
+        apreprocess: Optional[Callable[[OutputType], Awaitable[OutputType]]] = None,
+    ) -> None: ...
 
     @abstractmethod
     def invoke(

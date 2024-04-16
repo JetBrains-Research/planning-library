@@ -28,7 +28,8 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
     """
 
     required_prompt_input_vars = set(ReflexionActorInput.__annotations__) - {
-        "intermediate_steps"
+        "inputs",
+        "intermediate_steps",
     } | {"agent_scratchpad"}
 
     @classmethod
