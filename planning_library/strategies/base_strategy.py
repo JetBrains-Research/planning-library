@@ -31,8 +31,8 @@ class BaseCustomStrategy(Chain, ABC):
     max_iterations: int = 15
     verbose: bool = True
 
-    @abstractmethod
     @property
+    @abstractmethod
     def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]: ...
 
     @property

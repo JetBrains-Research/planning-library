@@ -33,6 +33,7 @@ class ThoughtEvaluatorConfig:
         ]
     ] = None
     parser_name: Optional[str] = None
+    output_parser: Optional[BaseOutputParser[float]] = None
 
 
 class ThoughtEvaluatorInput(TypedDict):
@@ -134,41 +135,24 @@ class ThoughtEvaluator(
 
     @classmethod
     def create_from_config(cls, config: ThoughtEvaluatorConfig) -> ThoughtEvaluator:
-        def _preprocess_input(
-            inputs: ThoughtEvaluatorInput,
-        ) -> Dict:
-            # TODO: figure out typing here
-            nonlocal config
-            if config.parser is None:
-                assert config.parser_name is not None
-                parser = ParserRegistry.get_parser(config.parser_name)
-            else:
-                parser = config.parser
-
-            intermediate_steps = parser.format_inputs(inputs)["agent_scratchpad"]
-            return {
-                **inputs["inputs"],
-                "next_thought": inputs["next_thought"],
-                "intermediate_steps": intermediate_steps,
-            }
-
         if config.runnable is not None:
             evaluator: ThoughtEvaluator = cls.create_threshold_evaluator_from_runnable(  # type: ignore[assignment]
                 runnable=config.runnable,
                 threshold=config.value_threshold,
                 threshold_mode="geq",
             )
-        else:
-            if config.llm is None:
-                raise ValueError("`llm` must be provided when `runnable` is None.")
+            return evaluator
 
-            evaluator = cls.create_threshold_evaluator(  # type: ignore[assignment]
-                llm=config.llm,
-                prompt=config.prompt,
-                user_message=config.user_message,
-                system_message=config.system_message,
-                threshold=config.value_threshold,
-                threshold_mode="geq",
-            )
-            evaluator.add_input_preprocessing(_preprocess_input)
-        return evaluator
+        if config.llm is None:
+            raise ValueError("`llm` must be provided when `runnable` is None.")
+
+        return cls.create(
+            llm=config.llm,
+            prompt=config.prompt,
+            user_message=config.user_message,
+            system_message=config.system_message,
+            threshold=config.value_threshold,
+            output_parser=config.output_parser,
+            parser=config.parser,
+            parser_name=config.parser_name,
+        )

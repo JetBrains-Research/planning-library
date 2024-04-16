@@ -18,7 +18,15 @@ class SimpleStrategy(BaseCustomStrategy):
     """Simple strategy akin to langchain.agents.AgentExecutor:
     calls agent in a loop until either AgentFinish is produced or early stopping condition in reached."""
 
-    agent: BaseSingleActionAgent | BaseMultiActionAgent
+    _agent: BaseSingleActionAgent | BaseMultiActionAgent
+
+    @property
+    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]:
+        return self._agent
+
+    @agent.setter
+    def agent(self, agent: Union[BaseSingleActionAgent, BaseMultiActionAgent]):
+        self._agent = agent
 
     @classmethod
     def create(
@@ -39,7 +47,7 @@ class SimpleStrategy(BaseCustomStrategy):
             raise ValueError("Default agent is currently not supported.")
 
         return SimpleStrategy(
-            agent=agent,
+            _agent=agent,
             action_executor=action_executor,
             return_intermediate_steps=return_intermediate_steps,
             return_finish_log=return_finish_log,

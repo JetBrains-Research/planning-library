@@ -10,8 +10,8 @@ from planning_library.strategies import BaseCustomStrategy
 
 
 class BaseADaPTExecutor(ABC):
-    @abstractmethod
     @property
+    @abstractmethod
     def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]: ...
 
     @abstractmethod

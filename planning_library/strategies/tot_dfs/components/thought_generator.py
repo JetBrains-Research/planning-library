@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 @dataclass
 class ThoughtGeneratorConfig:
-    max_num_thought: int
+    max_num_thoughts: int
     prompt: Optional[ChatPromptTemplate] = None
     user_message: Optional[str] = None
     system_message: Optional[str] = None
@@ -78,6 +78,15 @@ class ThoughtGenerator(
                     user_message,
                 ),
                 MessagesPlaceholder("agent_scratchpad"),
+                (
+                    "human",
+                    "You might have already made some suggestions for the current state - if you did, you will find them below.",
+                ),
+                MessagesPlaceholder("previous_thoughts"),
+                (
+                    "human",
+                    "Please, remember to suggest exactly ONE (1) tool call, no more and no less, different from your previous suggestions.",
+                ),
             ]
         )
 
@@ -117,7 +126,7 @@ class ThoughtGenerator(
     def create_from_config(cls, config: ThoughtGeneratorConfig) -> ThoughtGenerator:
         if config.agent is not None:
             return ThoughtGenerator(
-                agent=config.agent, max_num_thoughts=config.max_num_thought
+                agent=config.agent, max_num_thoughts=config.max_num_thoughts
             )
 
         if config.llm is None:
@@ -126,7 +135,7 @@ class ThoughtGenerator(
         if config.tools is None:
             raise ValueError("`tools` must be provided when `agent` is None.")
 
-        agent: AgentComponent = AgentComponent.create(
+        return cls.create(
             llm=config.llm,
             tools=config.tools,
             prompt=config.prompt,
@@ -134,5 +143,35 @@ class ThoughtGenerator(
             system_message=config.system_message,
             parser=config.parser,
             parser_name=config.parser_name,
+            max_num_thoughts=config.max_num_thoughts,
         )
-        return ThoughtGenerator(agent=agent, max_num_thoughts=config.max_num_thought)
+
+    @classmethod
+    def create(
+        cls,
+        llm: BaseChatModel,
+        tools: Sequence[BaseTool],
+        max_num_thoughts: int,
+        prompt: Optional[ChatPromptTemplate] = None,
+        user_message: Optional[str] = None,
+        system_message: Optional[str] = None,
+        parser: Optional[
+            Union[
+                BaseFunctionCallingSingleActionParser,
+                BaseFunctionCallingMultiActionParser,
+            ]
+        ] = None,
+        parser_name: Optional[str] = None,
+    ) -> ThoughtGenerator:
+        prompt = cls._process_prompt(
+            prompt=prompt, user_message=user_message, system_message=system_message
+        )
+
+        agent: AgentComponent = AgentComponent.create(
+            llm=llm,
+            tools=tools,
+            prompt=prompt,
+            parser=parser,
+            parser_name=parser_name,
+        )
+        return ThoughtGenerator(agent=agent, max_num_thoughts=max_num_thoughts)
