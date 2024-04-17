@@ -27,6 +27,8 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
     be initialized with only a single user message.
     """
 
+    name = "Actor"
+
     required_prompt_input_vars = set(ReflexionActorInput.__annotations__) - {
         "inputs",
         "intermediate_steps",

@@ -13,6 +13,9 @@ from planning_library.function_calling_parsers import (
     BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
 )
+from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+    format_thoughts,
+)
 from dataclasses import dataclass
 
 
@@ -48,6 +51,8 @@ class ThoughtGenerator(
         ThoughtGeneratorInput, List[Union[List[AgentAction], AgentAction, AgentFinish]]
     ]
 ):
+    name = "Generate Thoughts"
+
     required_prompt_input_vars = set(ThoughtGeneratorInput.__annotations__) - {
         "inputs",
         "intermediate_steps",
@@ -94,12 +99,14 @@ class ThoughtGenerator(
         self,
         inputs: ThoughtGeneratorInput,
         run_manager: Optional[CallbackManager] = None,
+        **kwargs,
     ) -> List[List[AgentAction] | AgentAction | AgentFinish]:
         results: List[List[AgentAction] | AgentAction | AgentFinish] = []
         for _ in range(self.max_num_thoughts):
             cur_result = self.agent.invoke(
                 {**inputs, "previous_thoughts": results},
                 run_manager=run_manager,
+                **kwargs,
             )
             # TODO: how to fix mypy warning properly here?
             results.append(cur_result)  # type: ignore[arg-type]
@@ -110,12 +117,14 @@ class ThoughtGenerator(
         self,
         inputs: ThoughtGeneratorInput,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> List[List[AgentAction] | AgentAction | AgentFinish]:
         results: List[List[AgentAction] | AgentAction | AgentFinish] = []
         for _ in range(self.max_num_thoughts):
             cur_result = await self.agent.ainvoke(
                 {**inputs, "previous_thoughts": results},
                 run_manager=run_manager,
+                **kwargs,
             )
             # TODO: how to fix mypy warning properly here?
             results.append(cur_result)  # type: ignore[arg-type]
@@ -174,4 +183,16 @@ class ThoughtGenerator(
             parser=parser,
             parser_name=parser_name,
         )
+
+        agent.add_input_preprocessing(
+            preprocess=lambda inputs: {
+                **{
+                    key: value
+                    for key, value in inputs.items()
+                    if key != "previous_thoughts"
+                },
+                "previous_thoughts": format_thoughts(inputs["previous_thoughts"]),
+            }
+        )
+
         return ThoughtGenerator(agent=agent, max_num_thoughts=max_num_thoughts)

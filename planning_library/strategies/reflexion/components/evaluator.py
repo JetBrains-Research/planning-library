@@ -30,6 +30,8 @@ class PreprocessedReflexionEvaluatorInput(TypedDict):
 class ReflexionEvaluator(
     Generic[OutputType], EvaluatorComponent[ReflexionEvaluatorInput, OutputType]
 ):
+    name = "Evaluator"
+
     required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__) - {
         "inputs"
     }

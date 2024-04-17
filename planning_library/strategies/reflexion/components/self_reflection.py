@@ -28,6 +28,8 @@ class PreprocessedReflexionSelfReflectionInput(TypedDict):
 class ReflexionSelfReflection(
     RunnableComponent[ReflexionSelfReflectionInput, Sequence[BaseMessage]]
 ):
+    name = "Self-Reflection"
+
     required_prompt_input_vars = set(ReflexionSelfReflectionInput.__annotations__) - {
         "inputs"
     }

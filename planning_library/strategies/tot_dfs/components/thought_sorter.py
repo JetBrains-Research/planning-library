@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from itertools import combinations
@@ -18,6 +19,9 @@ from planning_library.function_calling_parsers import (
 from typing_extensions import TypedDict
 from dataclasses import dataclass
 from collections import defaultdict
+from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+    format_thought,
+)
 
 
 @dataclass
@@ -45,8 +49,8 @@ class ThoughtSorterInput(TypedDict):
 
 class ThoughtSorterRunnableInput(TypedDict):
     intermediate_steps: List[Tuple[AgentAction, str]]
-    thought1: List[AgentAction] | AgentAction | AgentFinish
-    thought2: List[AgentAction] | AgentAction | AgentFinish
+    thought1: List[BaseMessage]
+    thought2: List[BaseMessage]
 
 
 class ThoughtSorter(
@@ -64,6 +68,8 @@ class ThoughtSorter(
 
     https://github.com/OpenBMB/ToolBench/blob/2937497244096960a532b21f66f663ed78e08588/toolbench/inference/LLM_rank/rank_candidate.py#L53
     """
+
+    name = "Sort Thoughts"
 
     def __init__(
         self,
@@ -92,16 +98,13 @@ class ThoughtSorter(
                     user_message,
                 ),
                 MessagesPlaceholder("intermediate_steps"),
+                ("human", "Here is the first proposed next step"),
+                MessagesPlaceholder("thought1"),
+                ("human", "Here is the second proposed next step:"),
+                MessagesPlaceholder("thought2"),
                 (
                     "human",
-                    dedent("""
-                         Here is the first proposed next step: 
-                         {thought1}
-                         
-                         Here is the second proposed next step:
-                         {thought2}
-
-                         Your goal is to judge which of the proposed actions is more likely to lead to the success.
+                    dedent("""Your goal is to judge which of the proposed actions is more likely to lead to the success.
 
                          Take your time and comment your decision, 
                          but make sure to always output either 1 or 2, 
@@ -123,15 +126,17 @@ class ThoughtSorter(
         thought1: List[AgentAction] | AgentAction | AgentFinish,
         thought2: List[AgentAction] | AgentAction | AgentFinish,
         run_manager: Optional[CallbackManager] = None,
+        **kwargs,
     ) -> str:
         return self.runnable.invoke(
             {
                 **inputs,  # type: ignore[typeddict-item]
                 "intermediate_steps": intermediate_steps,
-                "thought1": thought1,
-                "thought2": thought2,
+                "thought1": format_thought(thought1),
+                "thought2": format_thought(thought2),
             },
             run_manager=run_manager,
+            **kwargs,
         )
 
     async def _acompare_pairwise(
@@ -141,13 +146,14 @@ class ThoughtSorter(
         thought1: List[AgentAction] | AgentAction | AgentFinish,
         thought2: List[AgentAction] | AgentAction | AgentFinish,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> str:
         return await self.runnable.ainvoke(
             {
                 **inputs,  # type: ignore[typeddict-item]
                 "intermediate_steps": intermediate_steps,
-                "thought1": thought1,
-                "thought2": thought2,
+                "thought1": format_thought(thought1),
+                "thought2": format_thought(thought2),
             },
             run_manager=run_manager,
         )
@@ -156,6 +162,7 @@ class ThoughtSorter(
         self,
         inputs: ThoughtSorterInput,
         run_manager: Optional[CallbackManager] = None,
+        **kwargs,
     ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
         scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = (
             defaultdict(float)
@@ -169,6 +176,7 @@ class ThoughtSorter(
                 thought1=thought1,
                 thought2=thought2,
                 run_manager=run_manager,
+                **kwargs,
             )
 
             if result == "1":
@@ -186,6 +194,7 @@ class ThoughtSorter(
         self,
         inputs: ThoughtSorterInput,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
         scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = (
             defaultdict(float)

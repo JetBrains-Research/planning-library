@@ -13,7 +13,12 @@ class BaseActionExecutor(ABC):
     def tools(self) -> Sequence[BaseTool]: ...
 
     @abstractmethod
-    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+    def reset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> None:
         """Resets the current state. If actions are passed, will also execute them."""
         ...
 

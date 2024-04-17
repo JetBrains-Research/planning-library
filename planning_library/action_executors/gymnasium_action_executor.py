@@ -25,12 +25,20 @@ class GymnasiumActionExecutor(BaseActionExecutor):
     def tools(self) -> Sequence[BaseTool]:
         return self._env.get_wrapper_attr("tools")
 
-    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+    def reset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> None:
         """Resets the environment. If actions are passed, will also execute them."""
 
         options = kwargs
         if actions:
             options["trajectory"] = actions
+
+        if run_manager:
+            options["run_manager"] = run_manager
 
         self._env.reset(seed=self._seed, options=options)
 

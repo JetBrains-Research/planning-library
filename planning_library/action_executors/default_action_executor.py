@@ -15,7 +15,12 @@ class DefaultActionExecutor(BaseActionExecutor):
     def __init__(self, tools: Sequence[BaseTool]):
         self._tool_executor = ToolExecutor(tools)
 
-    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+    def reset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> None:
         """Resets the current state. If actions are passed, will also execute them.
 
         This action executor doesn't have a state by default, so this method doesn't do anything.

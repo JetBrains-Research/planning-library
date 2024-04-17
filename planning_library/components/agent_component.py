@@ -98,17 +98,18 @@ class AgentComponent(
             )
 
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
+        # TODO: no way to pass name to plan?
         return self.agent.plan(**inputs, callbacks=run_manager)
 
     async def ainvoke(
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> Union[List[AgentAction], AgentAction, AgentFinish]:
+        # TODO: no way to pass name to plan?
         outputs = await self.agent.aplan(**inputs, callbacks=run_manager)
         return outputs
 

@@ -43,13 +43,18 @@ class RunnableComponent(BaseComponent[InputType, OutputType]):
         self.runnable = self.runnable | RunnableLambda(preprocess, afunc=apreprocess)
 
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> OutputType:
+        config = kwargs
+        if "callbacks" not in config and run_manager:
+            config["callbacks"] = run_manager
+
+        if "run_name" not in config and self.name:
+            config["run_name"] = self.name
+
         outputs = self.runnable.invoke(
             inputs,
-            config={"callbacks": run_manager} if run_manager else {},
+            config=config,  # type: ignore[arg-type]
         )
         return outputs
 
@@ -57,9 +62,17 @@ class RunnableComponent(BaseComponent[InputType, OutputType]):
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> OutputType:
+        config = kwargs
+        if "callbacks" not in config and run_manager:
+            config["callbacks"] = run_manager
+
+        if "run_name" not in config and self.name:
+            config["run_name"] = self.name
+
         outputs = await self.runnable.ainvoke(
             inputs,
-            config={"callbacks": run_manager} if run_manager else {},
+            config=config,  # type: ignore[arg-type]
         )
         return outputs

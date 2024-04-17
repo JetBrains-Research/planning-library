@@ -7,7 +7,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
-
+from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+    format_thought,
+)
 from textwrap import dedent
 from planning_library.function_calling_parsers import (
     ParserRegistry,
@@ -45,6 +47,8 @@ class ThoughtEvaluatorInput(TypedDict):
 class ThoughtEvaluator(
     Generic[OutputType], EvaluatorComponent[ThoughtEvaluatorInput, OutputType]
 ):
+    name = "Evaluate Thoughts"
+
     required_prompt_input_vars = set(ThoughtEvaluatorInput.__annotations__) - {"inputs"}
 
     @classmethod
@@ -65,12 +69,11 @@ class ThoughtEvaluator(
                     user_message,
                 ),
                 MessagesPlaceholder("intermediate_steps"),
+                ("human", "Here is the proposed next step:" ""),
+                MessagesPlaceholder("next_thought"),
                 (
                     "human",
                     dedent("""
-                     Here is the proposed next step: 
-                     {next_thought}
-                     
                      Your goal is to judge whether this proposal should be followed or discarded, 
                      how likely it is to lead to the success.
                      
@@ -114,7 +117,7 @@ class ThoughtEvaluator(
 
             return {
                 **inputs["inputs"],
-                "next_thought": inputs["next_thought"],
+                "next_thought": format_thought(inputs["next_thought"]),
                 "intermediate_steps": intermediate_steps,
             }
 

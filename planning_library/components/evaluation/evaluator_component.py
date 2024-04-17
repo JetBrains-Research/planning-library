@@ -37,11 +37,12 @@ class EvaluatorComponent(
         self.judge.add_output_preprocessing(preprocess, apreprocess)
 
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> bool:
-        backbone_output = self.backbone.invoke(inputs, run_manager)
+        if "run_name" not in kwargs and self.name:
+            kwargs["run_name"] = self.name
+
+        backbone_output = self.backbone.invoke(inputs, run_manager, **kwargs)
         should_continue = self.judge.invoke(
             {"backbone_output": backbone_output}, run_manager
         )
@@ -51,8 +52,12 @@ class EvaluatorComponent(
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> bool:
-        backbone_output = await self.backbone.ainvoke(inputs, run_manager)
+        if "run_name" not in kwargs and self.name:
+            kwargs["run_name"] = self.name
+
+        backbone_output = await self.backbone.ainvoke(inputs, run_manager, **kwargs)
         should_continue = await self.judge.ainvoke(
             {"backbone_output": backbone_output}, run_manager
         )

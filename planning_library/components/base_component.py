@@ -8,6 +8,7 @@ OutputType = TypeVar("OutputType")
 
 
 class BaseComponent(Generic[InputType, OutputType], ABC):
+    name: Optional[str] = None
     required_prompt_input_vars: Set[str] = set()
 
     @classmethod
@@ -56,9 +57,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
 
     @abstractmethod
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> OutputType: ...
 
     @abstractmethod
@@ -66,4 +65,5 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> OutputType: ...

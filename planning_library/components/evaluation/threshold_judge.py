@@ -9,9 +9,7 @@ class LeqThresholdJudge(BaseComponent[InputType, bool]):
         self.threshold = threshold
 
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> bool:
         return inputs["backbone_output"] <= self.threshold
 
@@ -19,6 +17,7 @@ class LeqThresholdJudge(BaseComponent[InputType, bool]):
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> bool:
         return inputs["backbone_output"] <= self.threshold
 
@@ -28,9 +27,7 @@ class GeqThresholdJudge(BaseComponent[InputType, bool]):
         self.threshold = threshold
 
     def invoke(
-        self,
-        inputs: InputType,
-        run_manager: Optional[CallbackManager] = None,
+        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
     ) -> bool:
         return inputs["backbone_output"] >= self.threshold
 
@@ -38,5 +35,6 @@ class GeqThresholdJudge(BaseComponent[InputType, bool]):
         self,
         inputs: InputType,
         run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
     ) -> bool:
         return inputs["backbone_output"] >= self.threshold

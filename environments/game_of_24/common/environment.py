@@ -93,8 +93,10 @@ class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
         observation, info = "", {"numbers": self.numbers}
 
         if options is not None and "trajectory" in options:
-            for action in options["trajectory"]:
-                assert isinstance(action, AgentAction)
+            for action, step in options["trajectory"]:
+                assert isinstance(
+                    action, AgentAction
+                ), f"Expected AgentAction, got {action}"
                 observation, reward, terminated, truncated, info = self.step(
                     (
                         action,
