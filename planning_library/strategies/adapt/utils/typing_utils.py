@@ -1,17 +1,11 @@
-from typing_extensions import TypedDict
-from typing import Dict, Any, List, Literal
+from typing import List, Literal
+from langchain_core.pydantic_v1 import BaseModel, Field
 
 
-class ADaPTTask(TypedDict):
-    inputs: Dict[str, Any]
-    depth: int
+class ADaPTPlan(BaseModel):
+    subtasks: List[str] = Field(default_factory=list)
+    aggregation_mode: Literal["and", "or"] = Field(default="and")
 
-
-class InitialADaPTPlan(TypedDict):
-    subtasks: List[Dict[str, Any]]
-    logic: Literal["and", "or"]
-
-
-class ADaPTPlan(TypedDict):
-    subtasks: List[ADaPTTask]
-    logic: Literal["and", "or"]
+    def clear(self):
+        self.subtasks = []
+        self.aggregation_mode = "and"

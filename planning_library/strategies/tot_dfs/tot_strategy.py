@@ -8,7 +8,6 @@ from typing import (
     List,
     Optional,
     Tuple,
-    Sequence,
 )
 
 from langchain_core.agents import AgentAction, AgentFinish
@@ -58,10 +57,20 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     def agent(self):
         return self.thought_generator.agent.agent
 
+    @property
+    def input_keys(self) -> List[str]:
+        return self.agent.input_keys
+
+    @property
+    def output_keys(self) -> List[str]:
+        if self.return_intermediate_steps:
+            return self.agent.return_values + ["intermediate_steps"]
+        else:
+            return self.agent.return_values
+
     @classmethod
     def create(
         cls,
-        tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
@@ -101,13 +110,12 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 "Default thought sorter config is currently not supported."
             )
 
-        generator_config.tools = tools
         generator = ThoughtGenerator.create_from_config(generator_config)
         evaluator = ThoughtEvaluator.create_from_config(evaluator_config)
         sorter = ThoughtSorter.create_from_config(sorter_config) if do_sorting else None  # type: ignore[arg-type]
 
         if action_executor is None:
-            action_executor = DefaultActionExecutor(tools)
+            action_executor = DefaultActionExecutor(generator_config.tools)
 
         return cls(
             thought_generator=generator,

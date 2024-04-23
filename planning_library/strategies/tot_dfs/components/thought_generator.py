@@ -13,7 +13,7 @@ from planning_library.function_calling_parsers import (
     BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
 )
-from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+from planning_library.utils import (
     format_thoughts,
 )
 from dataclasses import dataclass
@@ -21,13 +21,17 @@ from dataclasses import dataclass
 
 @dataclass
 class ThoughtGeneratorConfig:
+    tools: Sequence[BaseTool]
     max_num_thoughts: int
+
     prompt: Optional[ChatPromptTemplate] = None
     user_message: Optional[str] = None
     system_message: Optional[str] = None
+
     agent: Optional[BaseMultiActionAgent | BaseSingleActionAgent] = None
+
     llm: Optional[BaseChatModel] = None
-    tools: Optional[Sequence[BaseTool]] = None
+
     parser: Optional[
         Union[
             BaseFunctionCallingSingleActionParser,

@@ -8,10 +8,8 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
 )
 
-from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.chains.base import Chain
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import (
@@ -32,31 +30,25 @@ class BaseCustomStrategy(Chain, ABC):
     verbose: bool = True
 
     @property
-    @abstractmethod
-    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]: ...
-
-    @property
     def tools(self) -> Sequence[BaseTool]:
         return self.action_executor.tools
 
     @property
+    @abstractmethod
     def input_keys(self) -> List[str]:
         """Return the input keys."""
-        return self.agent.input_keys
+        ...
 
     @property
+    @abstractmethod
     def output_keys(self) -> List[str]:
         """Return the singular output key."""
-        if self.return_intermediate_steps:
-            return self.agent.return_values + ["intermediate_steps"]
-        else:
-            return self.agent.return_values
+        ...
 
     @classmethod
     @abstractmethod
     def create(
         cls,
-        tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,

@@ -7,7 +7,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
-from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+from planning_library.utils import (
     format_thought,
 )
 from textwrap import dedent
@@ -23,11 +23,15 @@ from dataclasses import dataclass
 @dataclass
 class ThoughtEvaluatorConfig:
     value_threshold: float
+
     runnable: Optional[Runnable] = None
+
     prompt: Optional[ChatPromptTemplate] = None
     user_message: Optional[str] = None
     system_message: Optional[str] = None
+
     llm: Optional[BaseChatModel] = None
+
     parser: Optional[
         Union[
             BaseFunctionCallingSingleActionParser,
@@ -35,6 +39,7 @@ class ThoughtEvaluatorConfig:
         ]
     ] = None
     parser_name: Optional[str] = None
+
     output_parser: Optional[BaseOutputParser[float]] = None
 
 

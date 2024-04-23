@@ -1,22 +1,21 @@
-from typing import Dict, Iterator, List, Optional, Tuple, Union, Sequence, AsyncIterator
+from __future__ import annotations
 
-from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
+from typing import Dict, Iterator, List, Optional, Tuple, AsyncIterator, Any
+
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import (
     AsyncCallbackManagerForChainRun,
     CallbackManagerForChainRun,
 )
-from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 
 from ...action_executors import BaseActionExecutor
 from ..base_strategy import BaseCustomStrategy
-from .components import BaseADaPTExecutor, BaseADaPTPlanner
-from planning_library.strategies.adapt.utils import ADaPTTask
-from planning_library.action_executors import DefaultActionExecutor
-from planning_library.strategies.adapt.components.executors import StrategyADaPTExecutor
-from planning_library.strategies.adapt.components.planners import RunnableADaPTPlanner
-from planning_library.strategies.simple import SimpleStrategy
+
+from planning_library.strategies.adapt.components import ADaPTExecutor, ADaPTPlanner
+from planning_library.strategies.adapt.components.executor import ADaPTExecutorConfig
+from planning_library.strategies.adapt.components.planner import ADaPTPlannerConfig
+from dataclasses import asdict
 
 
 class ADaPTStrategy(BaseCustomStrategy):
@@ -25,75 +24,93 @@ class ADaPTStrategy(BaseCustomStrategy):
     Based on "ADaPT: As-Needed Decomposition and Planning with Language Models" by Prasad et al.
     """
 
-    executor: BaseADaPTExecutor
-    planner: BaseADaPTPlanner
+    executor: ADaPTExecutor
+    planner: ADaPTPlanner
     max_depth: int
-
-    @property
-    def agent(self) -> Union[BaseSingleActionAgent, BaseMultiActionAgent]:
-        return self.executor.agent
 
     @staticmethod
     def create(
-        tools: Sequence[BaseTool],
         action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
         verbose: bool = True,
-        agent: Optional[Union[BaseSingleActionAgent, BaseMultiActionAgent]] = None,
-        planner_runnable: Optional[Runnable] = None,
-        executor_strategy: Optional[BaseCustomStrategy] = None,
+        executor_config: Optional[ADaPTExecutorConfig] = None,
+        planner_config: Optional[ADaPTPlannerConfig] = None,
         max_depth: int = 20,
         **kwargs,
     ) -> "ADaPTStrategy":
         """Creates an instance of ADaPT strategy.
 
         Args:
-            agent: The agent to run for proposing thoughts at each DFS step.
-            tools: The valid tools the agent can call.
             action_executor: The action executor for the current strategy. If None, the default will be used.
-            planner_runnable: Runnable that powers ADaPT planner. If None, the default model will be used.
-            executor_strategy: Strategy that powers ADAPT executor. If None, the default model will be used.
+            executor_config: Configuration for the Executor component of ADaPT strategy.
+            planner_config: Configuration for the Planner component of ADaPT strategy.
+            return_intermediate_steps: True to additionally return a list of intermediate steps, False to simply return final outputs.
+            return_finish_log: True to additionally return the finish log of the agent, False to simply return output values.
+            max_iterations: Maximum allowed number of agent iterations for Executor and Planner.
             max_depth: Maximum depth of the ADaPT strategy (how deep the decomposition can go).
+            verbose: True to print extra information during execution.
         """
-        executor_kwargs = {
-            kwarg[len("executor_") :]: kwargs[kwarg]
-            for kwarg in kwargs
-            if kwarg.startswith("executor_")
-        }
-        adapt_kwargs = {
-            kwarg: kwargs[kwarg]
-            for kwarg in kwargs
-            if not kwarg.startswith("executor_")
-        }
+        # TODO: runnable component vs strategy component?
+        assert (
+            executor_config is not None
+        ), "Default ADaPT executor is currently not supported."
 
-        if planner_runnable is None:
-            raise ValueError("Default runnable for ADaPT planner is not supported yet.")
+        if executor_config.runnable is not None:
+            executor = ADaPTExecutor(executor_config.runnable)
+        else:
+            executor = ADaPTExecutor.create_simple_strategy(
+                **asdict(executor_config),
+                return_intermediate_steps=return_intermediate_steps,
+                return_finish_log=return_finish_log,
+                max_iterations=max_iterations,
+                verbose=verbose,
+            )
 
-        if action_executor is None:
-            action_executor = DefaultActionExecutor(tools)
+        assert (
+            planner_config is not None
+        ), "Default ADaPT planner is currently not supported."
 
-        if executor_strategy is None:
-            executor_strategy = SimpleStrategy.create(
-                agent=agent,
-                tools=tools,
-                action_executor=action_executor,
-                **executor_kwargs,
+        if planner_config.runnable is not None:
+            planner = ADaPTPlanner(planner_config.runnable)
+        else:
+            planner = ADaPTPlanner.create_simple_strategy(
+                **asdict(planner_config),
+                executor_parser=executor_config.parser,
+                executor_parser_name=executor_config.parser_name,
+                return_intermediate_steps=return_intermediate_steps,
+                return_finish_log=return_finish_log,
+                max_iterations=max_iterations,
+                verbose=verbose,
             )
 
         strategy = ADaPTStrategy(
-            action_executor=action_executor,
-            executor=StrategyADaPTExecutor(strategy=executor_strategy),
-            planner=RunnableADaPTPlanner(runnable=planner_runnable),
+            action_executor=executor.runnable.action_executor,  # type: ignore[attr-defined]
+            executor=executor,
+            planner=planner,
             max_depth=max_depth,
-            **adapt_kwargs,
+            return_intermediate_steps=return_intermediate_steps,
+            return_finish_log=return_finish_log,
+            max_iterations=max_iterations,
+            verbose=verbose,
         )
         return strategy
 
+    @property
+    def input_keys(self) -> List[str]:
+        # TODO: define properly
+        return []
+
+    @property
+    def output_keys(self) -> List[str]:
+        # TODO: define properly
+        return []
+
     def _adapt_step(
         self,
-        current_task: ADaPTTask,
+        inputs: Dict[str, Any],
+        depth: int,
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
@@ -105,7 +122,7 @@ class ADaPTStrategy(BaseCustomStrategy):
             run_manager: Callback for the current run.
         """
         # 1: if we're too deep in task decomposition, finish early
-        if current_task["depth"] > self.max_depth:
+        if depth > self.max_depth:
             return (
                 False,
                 AgentFinish(
@@ -115,13 +132,17 @@ class ADaPTStrategy(BaseCustomStrategy):
             )
 
         # 2: run task through executor
-        is_completed, cur_agent_outcome, cur_intermediate_steps = self.executor.execute(
-            inputs=current_task["inputs"],
-            run_manager=run_manager.get_child(
-                tag=f"executor:depth_{current_task['depth']}"
-            )
+        executor_output = self.executor.invoke(
+            inputs,  # type: ignore[arg-type]
+            run_manager=run_manager.get_child(tag=f"executor:depth_{depth}")
             if run_manager
             else None,
+        )
+
+        is_completed, cur_agent_outcome, cur_intermediate_steps = (
+            executor_output["is_completed"],
+            executor_output["agent_outcome"],
+            executor_output["intermediate_steps"],
         )
 
         # 3.1: if executor estimated successful completion of a task, wrap up
@@ -137,23 +158,23 @@ class ADaPTStrategy(BaseCustomStrategy):
             )
 
             # call a planner to further decompose a current task
-            plan = self.planner.plan(
-                inputs=current_task["inputs"],
-                current_depth=current_task["depth"],
-                agent_outcome=cur_agent_outcome,
-                intermediate_steps=cur_intermediate_steps,
-                run_manager=run_manager.get_child(
-                    tag=f"executor:depth_{current_task['depth']}"
-                )
+            plan = self.planner.invoke(
+                dict(
+                    inputs=inputs,
+                    executor_agent_outcome=cur_agent_outcome,
+                    executor_intermediate_steps=cur_intermediate_steps,
+                ),
+                run_manager=run_manager.get_child(tag=f"executor:depth_{depth}")
                 if run_manager
                 else None,
             )
             # when AND logic is given, execute tasks sequentially
-            if plan["logic"] == "and":
-                for task in plan["subtasks"]:
+            if plan["aggregation_mode"] == "and":
+                for task_inputs in plan["subtasks"]:
                     cur_is_completed, cur_agent_outcome, cur_intermediate_steps = (
                         self._adapt_step(
-                            current_task=task,
+                            inputs={"inputs": task_inputs},
+                            depth=depth + 1,
                             run_manager=run_manager,
                             intermediate_steps=intermediate_steps,
                         )
@@ -172,8 +193,36 @@ class ADaPTStrategy(BaseCustomStrategy):
                     return_values={}, log="Task solved successfully!"
                 )
                 return True, agent_outcome, intermediate_steps
+            elif plan["aggregation_mode"] == "or":
+                for task_inputs in plan["subtasks"]:
+                    (
+                        cur_is_completed,
+                        cur_agent_outcome,
+                        cur_intermediate_steps,
+                    ) = self._adapt_step(
+                        inputs={"inputs": task_inputs},
+                        depth=depth + 1,
+                        run_manager=run_manager,
+                        intermediate_steps=intermediate_steps,
+                    )
 
-            raise NotImplementedError("Currently, only `and` logic is supported.")
+                    if cur_is_completed:
+                        agent_outcome = AgentFinish(
+                            return_values={}, log="Task solved successfully!"
+                        )
+                        return True, agent_outcome, intermediate_steps
+                    else:
+                        intermediate_steps.extend(cur_intermediate_steps)
+
+                agent_outcome = AgentFinish(
+                    return_values=cur_agent_outcome.return_values,
+                    log=f"Couldn't solve the task. Last log: {cur_agent_outcome.log}",
+                )
+                return False, agent_outcome, intermediate_steps
+
+            raise NotImplementedError(
+                "Currently, only `and` and `or` aggregation logic is supported."
+            )
 
     def _run_strategy(
         self,
@@ -183,7 +232,8 @@ class ADaPTStrategy(BaseCustomStrategy):
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = self._adapt_step(
-            current_task={"inputs": inputs, "depth": 0},
+            inputs=inputs,
+            depth=0,
             run_manager=run_manager,
             intermediate_steps=[],
         )
@@ -191,19 +241,21 @@ class ADaPTStrategy(BaseCustomStrategy):
 
     async def _adapt_astep(
         self,
-        current_task: ADaPTTask,
+        inputs: Dict[str, Any],
+        depth: int,
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Tuple[bool, AgentFinish, List[Tuple[AgentAction, str]]]:
         """Performs an iteration of ADaPT strategy asynchronously.
 
         Args:
-            current_task: The input for the current iteration. It can either be the original input or a subtask of a plan generated on a previous step.
+            inputs: The input for the current iteration. It can either be the original input or a subtask of a plan generated on a previous step.
+            depth: Current decomposition step.
             intermediate_steps: A list of actions taken before the current iteration.
             run_manager: Callback for the current run.
         """
         # 1: if we're too deep in task decomposition, finish early
-        if current_task["depth"] > self.max_depth:
+        if depth > self.max_depth:
             return (
                 False,
                 AgentFinish(
@@ -213,17 +265,18 @@ class ADaPTStrategy(BaseCustomStrategy):
             )
 
         # 2: run task through executor
-        (
-            is_completed,
-            cur_agent_outcome,
-            cur_intermediate_steps,
-        ) = await self.executor.aexecute(
-            inputs=current_task["inputs"],
-            run_manager=run_manager.get_child(
-                tag=f"executor:depth_{current_task['depth']}"
-            )
+        executor_output = await self.executor.ainvoke(
+            dict(
+                inputs=inputs,
+            ),
+            run_manager=run_manager.get_child(tag=f"executor:depth_{depth}")
             if run_manager
             else None,
+        )
+        is_completed, cur_agent_outcome, cur_intermediate_steps = (
+            executor_output["is_completed"],
+            executor_output["agent_outcome"],
+            executor_output["intermediate_steps"],
         )
 
         # 3.1: if executor estimated successful completion of a task, wrap up
@@ -235,26 +288,26 @@ class ADaPTStrategy(BaseCustomStrategy):
             # clean up the environment
             self.action_executor.reset(actions=[step[0] for step in intermediate_steps])
 
-            plan = await self.planner.aplan(
-                inputs=current_task["inputs"],
-                current_depth=current_task["depth"],
-                agent_outcome=cur_agent_outcome,
-                intermediate_steps=cur_intermediate_steps,
-                run_manager=run_manager.get_child(
-                    tag=f"executor:depth_{current_task['depth']}"
-                )
+            plan = await self.planner.ainvoke(
+                dict(
+                    inputs=inputs,
+                    executor_agent_outcome=cur_agent_outcome,
+                    executor_intermediate_steps=cur_intermediate_steps,
+                ),
+                run_manager=run_manager.get_child(tag=f"executor:depth_{depth}")
                 if run_manager
                 else None,
             )
             # when AND logic is given, execute tasks sequentially
-            if plan["logic"] == "and":
-                for task in plan["subtasks"]:
+            if plan["aggregation_mode"] == "and":
+                for task_inputs in plan["subtasks"]:
                     (
                         cur_is_completed,
                         cur_agent_outcome,
                         cur_intermediate_steps,
                     ) = await self._adapt_astep(
-                        current_task=task,
+                        inputs={"inputs": task_inputs},
+                        depth=depth + 1,
                         run_manager=run_manager,
                         intermediate_steps=intermediate_steps,
                     )
@@ -272,8 +325,36 @@ class ADaPTStrategy(BaseCustomStrategy):
                     return_values={}, log="Task solved successfully!"
                 )
                 return True, agent_outcome, intermediate_steps
+            elif plan["aggregation_mode"] == "or":
+                for task_inputs in plan["subtasks"]:
+                    (
+                        cur_is_completed,
+                        cur_agent_outcome,
+                        cur_intermediate_steps,
+                    ) = await self._adapt_astep(
+                        inputs={"inputs": task_inputs},
+                        depth=depth + 1,
+                        run_manager=run_manager,
+                        intermediate_steps=intermediate_steps,
+                    )
 
-            raise NotImplementedError("Currently, only `and` logic is supported.")
+                    if cur_is_completed:
+                        agent_outcome = AgentFinish(
+                            return_values={}, log="Task solved successfully!"
+                        )
+                        return True, agent_outcome, intermediate_steps
+                    else:
+                        intermediate_steps.extend(cur_intermediate_steps)
+
+                agent_outcome = AgentFinish(
+                    return_values=cur_agent_outcome.return_values,
+                    log=f"Couldn't solve the task. Last log: {cur_agent_outcome.log}",
+                )
+                return False, agent_outcome, intermediate_steps
+
+            raise NotImplementedError(
+                "Currently, only `and` and `or` aggregation logic is supported."
+            )
 
     async def _arun_strategy(
         self,
@@ -283,7 +364,8 @@ class ADaPTStrategy(BaseCustomStrategy):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = await self._adapt_astep(
-            current_task={"inputs": inputs, "depth": 0},
+            inputs=inputs,
+            depth=0,
             run_manager=run_manager,
             intermediate_steps=[],
         )

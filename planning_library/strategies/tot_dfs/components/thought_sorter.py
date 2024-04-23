@@ -19,7 +19,7 @@ from planning_library.function_calling_parsers import (
 from typing_extensions import TypedDict
 from dataclasses import dataclass
 from collections import defaultdict
-from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
+from planning_library.utils import (
     format_thought,
 )
 
@@ -27,10 +27,13 @@ from planning_library.strategies.tot_dfs.utils.format_agent_outputs import (
 @dataclass
 class ThoughtSorterConfig:
     runnable: Optional[Runnable] = None
+
     prompt: Optional[ChatPromptTemplate] = None
     user_message: Optional[str] = None
     system_message: Optional[str] = None
+
     llm: Optional[BaseChatModel] = None
+
     parser: Optional[
         Union[
             BaseFunctionCallingSingleActionParser,
@@ -38,6 +41,7 @@ class ThoughtSorterConfig:
         ]
     ] = None
     parser_name: Optional[str] = None
+
     output_parser: Optional[BaseOutputParser[str]] = None
 
 
