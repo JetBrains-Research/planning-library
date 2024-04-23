@@ -56,10 +56,15 @@ class DefaultActionExecutor(BaseActionExecutor):
         reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
-        observations = self._tool_executor.invoke(
-            actions,
-            config={"callbacks": run_manager} if run_manager else {},
-        )
+        if isinstance(actions, list):
+            observations = [
+                self.execute(action, run_manager=run_manager) for action in actions
+            ]
+        else:
+            observations = self._tool_executor.invoke(
+                actions,
+                config={"callbacks": run_manager} if run_manager else {},
+            )
         if isinstance(observations, list):
             assert isinstance(actions, list)
             return [
