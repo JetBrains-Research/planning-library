@@ -3,24 +3,23 @@ from __future__ import annotations
 from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
-from typing import Optional, Literal
+from typing import Optional
 
 from planning_library.action_executors import DefaultActionExecutor
 from planning_library.strategies.adapt.utils import get_adapt_planner_tools
 from planning_library.strategies.adapt.utils.planner_tools import BaseADaPTPlannerTool
+from langchain_core.output_parsers import BaseOutputParser
 from planning_library.components import BaseComponent, RunnableComponent
 from planning_library.components.agent_component import AgentFactory
 from planning_library.strategies import SimpleStrategy
-from typing import Dict, Any, Tuple, List
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.runnables import Runnable
-from typing_extensions import TypedDict
+from typing import Dict, Any
+from langchain_core.runnables import Runnable, RunnableLambda
 from typing import Union, Sequence
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from planning_library.utils import format_thought
 from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
-from langchain_core.runnables import RunnableLambda
+
 from planning_library.function_calling_parsers import (
     BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
@@ -29,15 +28,11 @@ from planning_library.function_calling_parsers import (
 from dataclasses import dataclass
 
 
-class ADaPTPlannerInput(TypedDict):
-    inputs: Dict[str, Any]
-    executor_agent_outcome: AgentFinish
-    executor_intermediate_steps: List[Tuple[AgentAction, str]]
-
-
-class ADaPTPlannerOutput(TypedDict):
-    subtasks: List[str]
-    aggregation_mode: Literal["and", "or"]
+from planning_library.strategies.adapt.utils import (
+    ADaPTPlannerInput,
+    ADaPTPlannerOutput,
+    SimplePlannerOutputParser,
+)
 
 
 @dataclass
@@ -55,6 +50,8 @@ class ADaPTPlannerConfig:
         ]
     ] = None
     parser_name: Optional[str] = None
+    output_parser: Optional[BaseOutputParser[ADaPTPlannerOutput]] = None
+    mode: str = "agent"
 
 
 class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
@@ -62,7 +59,9 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
 
     def __init__(
         self,
-        runnable: Runnable | RunnableComponent[ADaPTPlannerInput, Any],
+        runnable: Runnable
+        | RunnableComponent[ADaPTPlannerInput, Any]
+        | RunnableComponent[ADaPTPlannerInput, ADaPTPlannerOutput],
         tools: Optional[Sequence[BaseADaPTPlannerTool]] = None,
         mode: str = "agent",
     ):
@@ -74,31 +73,40 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
 
     @classmethod
     def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, mode: str = "agent"
+        cls,
+        system_message: Optional[str],
+        user_message: str,
+        mode: str = "agent",
+        **kwargs,
     ) -> ChatPromptTemplate:
-        if mode == "agent":
-            if system_message is None:
-                system_message = (
-                    "You are an advanced Planning agent that decomposes auxiliary tasks into step-by-step "
-                    "plans for another advanced agent, Executor."
-                )
+        if system_message is None:
+            system_message = (
+                "You are an advanced Planning agent that decomposes auxiliary tasks into step-by-step "
+                "plans for another advanced agent, Executor."
+            )
 
+        base_messages = [
+            ("system", system_message),
+            (
+                "human",
+                user_message,
+            ),
+            (
+                "human",
+                "Here is the final outcome of the original task:",
+            ),
+            MessagesPlaceholder("executor_agent_outcome"),
+            (
+                "human",
+                "Below, you will find the intermediate steps that were taken in order to achieve this outcome.",
+            ),
+            MessagesPlaceholder("executor_intermediate_steps"),
+        ]
+
+        if mode == "agent":
             return ChatPromptTemplate.from_messages(
-                [
-                    ("system", system_message),
-                    (
-                        "human",
-                        user_message,
-                    ),
-                    (
-                        "human",
-                        dedent("""
-                            Here is the final outcome of the original task: {executor_agent_outcome}.
-    
-                            Below, you will find the intermediate steps that were taken in order to achieve this outcome.
-                            """),
-                    ),
-                    MessagesPlaceholder("executor_intermediate_steps"),
+                base_messages
+                + [
                     (
                         "human",
                         dedent("""
@@ -114,10 +122,43 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
     
                             Each subtask will be passed to an executor agent separately. Make sure to make all the instructions self-sufficient (containing all the necessary information, observations, etc.), yet concise.
     
-                            You are given access to a set of tools to help with the plan construction. When you are done, simply refrain from calling any tools.                          
+                            You are given access to a set of tools to help with the plan construction. ALWAYS use tools, refrain from using tools only when you are done.                          
                             """),
                     ),
                     MessagesPlaceholder("agent_scratchpad"),
+                ]
+            )
+
+        elif mode == "simple":
+            return ChatPromptTemplate.from_messages(
+                base_messages
+                + [
+                    (
+                        "human",
+                        dedent("""
+                            The trial above was unsuccessful. Your goal is to construct a step-by-step plan to successfully solve the original task.
+                            Plan is a list of subtasks with the logic of how the subtasks' results should be aggregated.
+
+                            You are only allowed to devise plans either with "and" aggregation logic or "or" aggregation logic.
+                            For "and" logic, the original task will only be considered solved if ALL subtasks are successfully solved.
+                            For "or" logic, the original task will only be considered solved if ANY of the subtasks are successfully solved.
+                            In both cases, subtasks will be executed sequentially. 
+                            For "and" logic, the execution will stop at the first failure.
+                            For "or" logic, the execution will stop at the first success.
+
+                            Each subtask will be passed to an executor agent separately. Make sure to make all the instructions self-sufficient (containing all the necessary information, observations, etc.), yet concise.
+
+                            Use JSON format to output a plan. It should contain keys 'subtasks' (list of subtasks, where each subtask is defined by a simple natural-language instruction, a single string) and 'aggregation_mode' (logic for uniting the subtasks results), like that:
+                            ```
+                            {{"subtasks": [
+                                          "<subtask1 instruction>", 
+                                          "<subtask2 instruction>", 
+                                          ..., 
+                                          "<subtaskn instruction>"],
+                             "aggregation_mode": "<aggregation mode>"}}
+                            ```    
+                            """),
+                    ),
                 ]
             )
         raise NotImplementedError("Currently, only agentic planner is supported.")
@@ -141,8 +182,14 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
                 "subtasks": plan.subtasks,
                 "aggregation_mode": plan.aggregation_mode,
             }
+        if self.mode == "simple":
+            return self.runnable.invoke(
+                inputs, run_manager=run_manager, run_name=self.name
+            )
 
-        raise NotImplementedError("Currently, only agentic planner is supported.")
+        raise NotImplementedError(
+            "Currently, only `agent` (with tools) and `simple` (a single call to llm) modes for the planner are supported."
+        )
 
     async def ainvoke(
         self,
@@ -163,11 +210,15 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
                 "subtasks": plan.subtasks,
                 "aggregation_mode": plan.aggregation_mode,
             }
+        if self.mode == "simple":
+            return await self.runnable.ainvoke(
+                inputs, run_manager=run_manager, run_name=self.name
+            )
 
         raise NotImplementedError("Currently, only agentic planner is supported.")
 
     @classmethod
-    def create_planner_agent(
+    def _create_agent(
         cls,
         llm: BaseChatModel,
         tools: Sequence[BaseTool],
@@ -181,51 +232,17 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
             ]
         ] = None,
         parser_name: Optional[str] = None,
-        executor_parser: Optional[
-            Union[
-                BaseFunctionCallingSingleActionParser,
-                BaseFunctionCallingMultiActionParser,
-            ]
-        ] = None,
-        executor_parser_name: Optional[str] = None,
     ) -> Union[RunnableAgent, RunnableMultiActionAgent]:
-        def _preprocess_input(
-            inputs: Dict[str, Any],
-        ) -> Dict[str, Any]:
-            # TODO: figure out typing here
-            nonlocal executor_parser, executor_parser_name
-            if executor_parser is None:
-                assert executor_parser_name is not None
-                executor_parser = ParserRegistry.get_parser(executor_parser_name)
-
-            executor_intermediate_steps = executor_parser.format_inputs(
-                {
-                    "inputs": inputs["inputs"],
-                    "intermediate_steps": inputs["executor_intermediate_steps"],
-                }
-            )["agent_scratchpad"]
-
-            return {
-                **inputs["inputs"],
-                "intermediate_steps": inputs["intermediate_steps"],
-                "executor_agent_outcome": format_thought(
-                    inputs["executor_agent_outcome"]
-                ),
-                "executor_intermediate_steps": executor_intermediate_steps,
-            }
-
         prompt = cls._process_prompt(
             prompt=prompt, user_message=user_message, system_message=system_message
         )
 
-        agent = AgentFactory.create_agent(
+        return AgentFactory.create_agent(
             llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name
         )
-        agent.runnable = RunnableLambda(_preprocess_input) | agent.runnable  # type: ignore[assignment]
-        return agent
 
     @classmethod
-    def create_simple_strategy(
+    def create_agent_planner(
         cls,
         llm: BaseChatModel,
         tools: Optional[Sequence[BaseADaPTPlannerTool]] = None,
@@ -252,9 +269,33 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         verbose: bool = True,
         **kwargs,
     ) -> "ADaPTPlanner":
+        def _preprocess_input(
+            inputs: ADaPTPlannerInput,
+        ) -> Dict[str, Any]:
+            # TODO: figure out typing here
+            nonlocal executor_parser, executor_parser_name
+            if executor_parser is None:
+                assert executor_parser_name is not None
+                executor_parser = ParserRegistry.get_parser(executor_parser_name)
+
+            executor_intermediate_steps = executor_parser.format_inputs(
+                {
+                    "inputs": inputs["inputs"],
+                    "intermediate_steps": inputs["executor_intermediate_steps"],
+                }
+            )["agent_scratchpad"]
+
+            return {
+                **inputs["inputs"],
+                "executor_agent_outcome": format_thought(
+                    inputs["executor_agent_outcome"]
+                ),
+                "executor_intermediate_steps": executor_intermediate_steps,
+            }
+
         tools = tools if tools is not None else get_adapt_planner_tools()  # type: ignore[assignment]
 
-        agent = cls.create_planner_agent(
+        agent = cls._create_agent(
             llm=llm,
             tools=tools,  # type: ignore[arg-type]
             prompt=prompt,
@@ -262,8 +303,6 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
             system_message=system_message,
             parser=parser,
             parser_name=parser_name,
-            executor_parser=executor_parser,
-            executor_parser_name=executor_parser_name,
         )
 
         strategy = SimpleStrategy.create(
@@ -275,4 +314,63 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
             max_iterations=max_iterations,
             verbose=verbose,
         )
-        return cls(runnable=strategy, tools=tools)
+        runnable = RunnableLambda(_preprocess_input) | strategy
+        planner = cls(runnable=runnable, tools=tools)
+        return planner
+
+    @classmethod
+    def create_simple_planner(
+        cls,
+        llm: BaseChatModel,
+        prompt: Optional[ChatPromptTemplate] = None,
+        user_message: Optional[str] = None,
+        system_message: Optional[str] = None,
+        executor_parser: Optional[
+            Union[
+                BaseFunctionCallingSingleActionParser,
+                BaseFunctionCallingMultiActionParser,
+            ]
+        ] = None,
+        executor_parser_name: Optional[str] = None,
+        output_parser=None,
+        **kwargs,
+    ) -> "ADaPTPlanner":
+        def _preprocess_input(
+            inputs: Dict[str, Any],
+        ) -> Dict[str, Any]:
+            # TODO: figure out typing here
+            nonlocal executor_parser, executor_parser_name
+            if executor_parser is None:
+                assert executor_parser_name is not None
+                executor_parser = ParserRegistry.get_parser(executor_parser_name)
+
+            executor_intermediate_steps = executor_parser.format_inputs(
+                {
+                    "inputs": inputs["inputs"],
+                    "intermediate_steps": inputs["executor_intermediate_steps"],
+                }
+            )["agent_scratchpad"]
+
+            return {
+                **inputs["inputs"],
+                "executor_agent_outcome": format_thought(
+                    inputs["executor_agent_outcome"]
+                ),
+                "executor_intermediate_steps": executor_intermediate_steps,
+            }
+
+        prompt = cls._process_prompt(
+            prompt=prompt,
+            user_message=user_message,
+            system_message=system_message,
+            mode="simple",
+        )
+
+        if output_parser is None:
+            output_parser = SimplePlannerOutputParser()
+
+        runnable = RunnableComponent.create_from_steps(
+            prompt=prompt, llm=llm, output_parser=output_parser
+        )
+        runnable.add_input_preprocessing(_preprocess_input)
+        return cls(runnable=runnable, mode="simple")

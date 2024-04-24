@@ -36,7 +36,7 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
 
     @classmethod
     def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str
+        cls, system_message: Optional[str], user_message: str, **kwargs
     ) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can improve based on self-reflection."

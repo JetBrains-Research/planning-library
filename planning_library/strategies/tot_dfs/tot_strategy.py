@@ -16,7 +16,6 @@ from langchain_core.callbacks import (
     CallbackManagerForChainRun,
 )
 
-from langchain_core.tools import BaseTool
 
 from ...action_executors import BaseActionExecutor, DefaultActionExecutor
 from ..base_strategy import BaseCustomStrategy
@@ -44,6 +43,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     Also supports DFSDT from "ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs" by Qin et al.
     """
 
+    action_executor: BaseActionExecutor
     thought_generator: ThoughtGenerator
     thought_evaluator: ThoughtEvaluator
     thought_sorter: Optional[ThoughtSorter] = None
@@ -71,11 +71,11 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     @classmethod
     def create(
         cls,
-        action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
         verbose: bool = True,
+        action_executor: Optional[BaseActionExecutor] = None,
         generator_config: Optional[ThoughtGeneratorConfig] = None,
         evaluator_config: Optional[ThoughtEvaluatorConfig] = None,
         sorter_config: Optional[ThoughtSorterConfig] = None,
@@ -191,8 +191,6 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     def _run_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         """Runs Tree of Thoughts + DFS strategy.
@@ -318,8 +316,6 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     async def _arun_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         """Runs Tree of Thoughts + DFS strategy asynchronously.

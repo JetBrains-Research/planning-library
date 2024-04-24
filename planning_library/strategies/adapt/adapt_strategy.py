@@ -7,9 +7,8 @@ from langchain_core.callbacks import (
     AsyncCallbackManagerForChainRun,
     CallbackManagerForChainRun,
 )
-from langchain_core.tools import BaseTool
 
-from ...action_executors import BaseActionExecutor
+
 from ..base_strategy import BaseCustomStrategy
 
 from planning_library.strategies.adapt.components import ADaPTExecutor, ADaPTPlanner
@@ -30,7 +29,6 @@ class ADaPTStrategy(BaseCustomStrategy):
 
     @staticmethod
     def create(
-        action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
@@ -74,8 +72,8 @@ class ADaPTStrategy(BaseCustomStrategy):
 
         if planner_config.runnable is not None:
             planner = ADaPTPlanner(planner_config.runnable)
-        else:
-            planner = ADaPTPlanner.create_simple_strategy(
+        elif planner_config.mode == "agent":
+            planner = ADaPTPlanner.create_agent_planner(
                 **asdict(planner_config),
                 executor_parser=executor_config.parser,
                 executor_parser_name=executor_config.parser_name,
@@ -84,9 +82,18 @@ class ADaPTStrategy(BaseCustomStrategy):
                 max_iterations=max_iterations,
                 verbose=verbose,
             )
+        elif planner_config.mode == "simple":
+            planner = ADaPTPlanner.create_simple_planner(
+                **asdict(planner_config),
+                executor_parser=executor_config.parser,
+                executor_parser_name=executor_config.parser_name,
+            )
+        else:
+            raise ValueError(
+                f"Unknown planner mode `{planner_config.mode}`. Currently supported are: `agent`, `simple`."
+            )
 
         strategy = ADaPTStrategy(
-            action_executor=executor.runnable.action_executor,  # type: ignore[attr-defined]
             executor=executor,
             planner=planner,
             max_depth=max_depth,
@@ -151,16 +158,12 @@ class ADaPTStrategy(BaseCustomStrategy):
             return True, cur_agent_outcome, intermediate_steps
         else:
             # 3.2: otherwise:
-            # clean up the environment
-            self.action_executor.reset(
-                actions=[step[0] for step in intermediate_steps],
-                run_manager=run_manager.get_child() if run_manager else None,
-            )
+            # TODO: clean up the environment
 
             # call a planner to further decompose a current task
             plan = self.planner.invoke(
                 dict(
-                    inputs=inputs,
+                    inputs=inputs["inputs"],
                     executor_agent_outcome=cur_agent_outcome,
                     executor_intermediate_steps=cur_intermediate_steps,
                 ),
@@ -173,7 +176,9 @@ class ADaPTStrategy(BaseCustomStrategy):
                 for task_inputs in plan["subtasks"]:
                     cur_is_completed, cur_agent_outcome, cur_intermediate_steps = (
                         self._adapt_step(
-                            inputs={"inputs": task_inputs},
+                            inputs={
+                                "inputs": {"inputs": task_inputs}
+                            },  # TODO: hard-coded inputs key is ugly
                             depth=depth + 1,
                             run_manager=run_manager,
                             intermediate_steps=intermediate_steps,
@@ -200,7 +205,9 @@ class ADaPTStrategy(BaseCustomStrategy):
                         cur_agent_outcome,
                         cur_intermediate_steps,
                     ) = self._adapt_step(
-                        inputs={"inputs": task_inputs},
+                        inputs={
+                            "inputs": {"inputs": task_inputs}
+                        },  # TODO: hard-coded inputs key is ugly
                         depth=depth + 1,
                         run_manager=run_manager,
                         intermediate_steps=intermediate_steps,
@@ -227,8 +234,6 @@ class ADaPTStrategy(BaseCustomStrategy):
     def _run_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = self._adapt_step(
@@ -285,8 +290,7 @@ class ADaPTStrategy(BaseCustomStrategy):
             return True, cur_agent_outcome, intermediate_steps
         else:
             # 3.2: otherwise:
-            # clean up the environment
-            self.action_executor.reset(actions=[step[0] for step in intermediate_steps])
+            # TODO: clean up the environment
 
             plan = await self.planner.ainvoke(
                 dict(
@@ -306,7 +310,7 @@ class ADaPTStrategy(BaseCustomStrategy):
                         cur_agent_outcome,
                         cur_intermediate_steps,
                     ) = await self._adapt_astep(
-                        inputs={"inputs": task_inputs},
+                        inputs={"inputs": {"inputs": task_inputs}},
                         depth=depth + 1,
                         run_manager=run_manager,
                         intermediate_steps=intermediate_steps,
@@ -332,7 +336,7 @@ class ADaPTStrategy(BaseCustomStrategy):
                         cur_agent_outcome,
                         cur_intermediate_steps,
                     ) = await self._adapt_astep(
-                        inputs={"inputs": task_inputs},
+                        inputs={"inputs": {"inputs": task_inputs}},
                         depth=depth + 1,
                         run_manager=run_manager,
                         intermediate_steps=intermediate_steps,
@@ -359,8 +363,6 @@ class ADaPTStrategy(BaseCustomStrategy):
     async def _arun_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         _, agent_outcome, intermediate_steps = await self._adapt_astep(

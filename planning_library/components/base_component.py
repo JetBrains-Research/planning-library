@@ -13,7 +13,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
 
     @classmethod
     def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str
+        cls, system_message: Optional[str], user_message: str, **kwargs
     ) -> ChatPromptTemplate:
         raise NotImplementedError(
             f"Default prompt is not supported for {cls.__name__}. Please, provide `prompt` instead of `user_message`."
@@ -25,6 +25,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
         prompt: Optional[ChatPromptTemplate] = None,
         system_message: Optional[str] = None,
         user_message: Optional[str] = None,
+        **kwargs,
     ) -> ChatPromptTemplate:
         if prompt is None:
             if user_message is None:
@@ -32,7 +33,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
                     "Either `prompt` or `user_message` are required to create an agent."
                 )
             prompt = cls._create_default_prompt(
-                system_message=system_message, user_message=user_message
+                system_message=system_message, user_message=user_message, **kwargs
             )
 
         missing_vars = cls.required_prompt_input_vars.difference(prompt.input_variables)

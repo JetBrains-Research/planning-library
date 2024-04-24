@@ -36,7 +36,7 @@ class ReflexionSelfReflection(
 
     @classmethod
     def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str
+        cls, system_message: Optional[str], user_message: str, **kwRGS
     ) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can self-reflect on their shortcomings when solving reasoning tasks."

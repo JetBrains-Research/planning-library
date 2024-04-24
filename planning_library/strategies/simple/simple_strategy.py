@@ -18,6 +18,7 @@ class SimpleStrategy(BaseCustomStrategy):
     """Simple strategy akin to langchain.agents.AgentExecutor:
     calls agent in a loop until either AgentFinish is produced or early stopping condition in reached."""
 
+    action_executor: BaseActionExecutor
     agent: BaseSingleActionAgent | BaseMultiActionAgent
 
     @property
@@ -34,11 +35,11 @@ class SimpleStrategy(BaseCustomStrategy):
     @classmethod
     def create(
         cls,
-        action_executor: Optional[BaseActionExecutor] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
         verbose: bool = True,
+        action_executor: Optional[BaseActionExecutor] = None,
         tools: Optional[Sequence[BaseTool]] = None,
         agent: Optional[Union[BaseSingleActionAgent, BaseMultiActionAgent]] = None,
         **kwargs,
@@ -65,8 +66,6 @@ class SimpleStrategy(BaseCustomStrategy):
     def _run_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         intermediate_steps: List[Tuple[AgentAction, str]] = []
@@ -110,8 +109,6 @@ class SimpleStrategy(BaseCustomStrategy):
     async def _arun_strategy(
         self,
         inputs: Dict[str, str],
-        name_to_tool_map: Dict[str, BaseTool],
-        color_mapping: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
         intermediate_steps: List[Tuple[AgentAction, str]] = []

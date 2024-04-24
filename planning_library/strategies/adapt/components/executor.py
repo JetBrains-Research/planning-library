@@ -10,7 +10,7 @@ from planning_library.components.agent_component import AgentFactory
 from planning_library.strategies import SimpleStrategy
 from typing import Dict, Any, Tuple, List
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableLambda
 from typing_extensions import TypedDict
 from typing import Union, Sequence
 from langchain_core.language_models import BaseChatModel
@@ -65,7 +65,7 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
 
     @classmethod
     def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str
+        cls, system_message: Optional[str], user_message: str, **kwargs
     ) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent."
@@ -130,6 +130,11 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
         verbose: bool = True,
         **kwargs,
     ) -> "ADaPTExecutor":
+        def _preprocess_input(
+            inputs: ADaPTExecutorInput,
+        ) -> Dict[str, Any]:
+            return {**inputs["inputs"]}
+
         prompt = cls._process_prompt(
             prompt=prompt, user_message=user_message, system_message=system_message
         )
@@ -149,4 +154,7 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
             max_iterations=max_iterations,
             verbose=verbose,
         )
-        return cls(runnable=strategy)  # type: ignore[arg-type]
+
+        runnable = RunnableLambda(_preprocess_input) | strategy
+
+        return cls(runnable=runnable)  # type: ignore[arg-type]
