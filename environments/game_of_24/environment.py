@@ -9,12 +9,12 @@ from langchain_core.tools import BaseTool
 from langchain_core.callbacks import CallbackManager
 
 from .tools import AddTool, MultiplyTool, SubtractTool, DivideTool
-from planning_library.action_executors import DefaultActionExecutor
+from planning_library.action_executors import LangchainActionExecutor
 
 
 class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
     def __init__(self, numbers: Optional[List[float | int]] = None):
-        self._action_executor = DefaultActionExecutor(
+        self._action_executor = LangchainActionExecutor(
             tools=[
                 AddTool(env=self),  # type: ignore[call-arg]
                 MultiplyTool(env=self),  # type: ignore[call-arg]

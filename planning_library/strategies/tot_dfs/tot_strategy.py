@@ -17,7 +17,7 @@ from langchain_core.callbacks import (
 )
 
 
-from ...action_executors import BaseActionExecutor, DefaultActionExecutor
+from ...action_executors import BaseActionExecutor, LangchainActionExecutor, MetaTools
 from ..base_strategy import BaseCustomStrategy
 
 from .components import (
@@ -71,6 +71,7 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
     @classmethod
     def create(
         cls,
+        meta_tools: Optional[MetaTools] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
@@ -115,7 +116,9 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
         sorter = ThoughtSorter.create_from_config(sorter_config) if do_sorting else None  # type: ignore[arg-type]
 
         if action_executor is None:
-            action_executor = DefaultActionExecutor(generator_config.tools)
+            action_executor = LangchainActionExecutor(
+                tools=generator_config.tools, meta_tools=meta_tools
+            )
 
         return cls(
             thought_generator=generator,
@@ -227,11 +230,15 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 if isinstance(new_thought, AgentFinish):
                     observation = None
                 else:
+                    # reset to parent node state
+                    self.action_executor.reset(
+                        actions=[t[0] for t in trajectory],
+                        run_manager=run_manager.get_child() if run_manager else None,
+                    )
+                    # execute action
                     observation = self.action_executor.execute(
                         actions=new_thought,
                         run_manager=run_manager.get_child() if run_manager else None,
-                        reset_before_action=True,
-                        trajectory=trajectory,
                     )
 
                 new_node = ToTNode(
@@ -352,11 +359,15 @@ class TreeOfThoughtsDFSStrategy(BaseCustomStrategy):
                 if isinstance(new_thought, AgentFinish):
                     observation = None
                 else:
+                    # reset to parent node state
+                    await self.action_executor.areset(
+                        actions=[t[0] for t in trajectory],
+                        run_manager=run_manager.get_child() if run_manager else None,
+                    )
+                    # execute action
                     observation = await self.action_executor.aexecute(
                         actions=new_thought,
                         run_manager=run_manager.get_child() if run_manager else None,
-                        reset_before_action=True,
-                        trajectory=trajectory,
                     )
 
                 new_node = ToTNode(

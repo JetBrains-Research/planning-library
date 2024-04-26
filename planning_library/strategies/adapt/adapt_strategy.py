@@ -10,7 +10,7 @@ from langchain_core.callbacks import (
 
 
 from ..base_strategy import BaseCustomStrategy
-
+from planning_library.action_executors import LangchainActionExecutor, MetaTools
 from planning_library.strategies.adapt.components import ADaPTExecutor, ADaPTPlanner
 from planning_library.strategies.adapt.components.executor import ADaPTExecutorConfig
 from planning_library.strategies.adapt.components.planner import ADaPTPlannerConfig
@@ -29,6 +29,7 @@ class ADaPTStrategy(BaseCustomStrategy):
 
     @staticmethod
     def create(
+        meta_tools: Optional[MetaTools] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
@@ -56,7 +57,13 @@ class ADaPTStrategy(BaseCustomStrategy):
         ), "Default ADaPT executor is currently not supported."
 
         if executor_config.runnable is not None:
-            executor = ADaPTExecutor(executor_config.runnable)
+            executor = ADaPTExecutor(
+                executor_config.runnable,
+                action_executor=LangchainActionExecutor(
+                    tools=executor_config.tools if executor_config.tools else [],
+                    meta_tools=executor_config.meta_tools,
+                ),
+            )
         else:
             executor = ADaPTExecutor.create_simple_strategy(
                 **asdict(executor_config),
@@ -158,7 +165,12 @@ class ADaPTStrategy(BaseCustomStrategy):
             return True, cur_agent_outcome, intermediate_steps
         else:
             # 3.2: otherwise:
-            # TODO: clean up the environment
+            self.executor.reset(
+                actions=[a[0] for a in intermediate_steps],
+                run_manager=run_manager.get_child(tag="clean_env")
+                if run_manager
+                else None,
+            )
 
             # call a planner to further decompose a current task
             plan = self.planner.invoke(
@@ -290,7 +302,12 @@ class ADaPTStrategy(BaseCustomStrategy):
             return True, cur_agent_outcome, intermediate_steps
         else:
             # 3.2: otherwise:
-            # TODO: clean up the environment
+            await self.executor.areset(
+                actions=[a[0] for a in intermediate_steps],
+                run_manager=run_manager.get_child(tag="clean_env")
+                if run_manager
+                else None,
+            )
 
             plan = await self.planner.ainvoke(
                 dict(

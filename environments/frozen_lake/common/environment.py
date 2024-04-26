@@ -9,13 +9,13 @@ from langchain_core.tools import BaseTool
 from langchain_core.callbacks import CallbackManager
 
 from .tools import MoveTool
-from planning_library.action_executors import DefaultActionExecutor
+from planning_library.action_executors import LangchainActionExecutor
 
 
 class FrozenLakeEnvWrapper(gym.Wrapper):
     def __init__(self, env: FrozenLakeEnv):
         super().__init__(env)
-        self._action_executor = DefaultActionExecutor(tools=[MoveTool(env=self)])  # type: ignore[call-arg]
+        self._action_executor = LangchainActionExecutor(tools=[MoveTool(env=self)])  # type: ignore[call-arg]
 
     @property
     def tools(self) -> Sequence[BaseTool]:

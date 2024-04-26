@@ -7,7 +7,11 @@ from langchain_core.callbacks import (
 )
 
 from planning_library.strategies import BaseCustomStrategy
-from planning_library.action_executors import BaseActionExecutor, DefaultActionExecutor
+from planning_library.action_executors import (
+    BaseActionExecutor,
+    LangchainActionExecutor,
+    MetaTools,
+)
 
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.tools import BaseTool
@@ -35,6 +39,7 @@ class SimpleStrategy(BaseCustomStrategy):
     @classmethod
     def create(
         cls,
+        meta_tools: Optional[MetaTools] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
@@ -48,7 +53,7 @@ class SimpleStrategy(BaseCustomStrategy):
         action_executor = (
             action_executor
             if action_executor is not None
-            else DefaultActionExecutor(tools=tools)
+            else LangchainActionExecutor(tools=tools, meta_tools=meta_tools)
         )
 
         if agent is None:

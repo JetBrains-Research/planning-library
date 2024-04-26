@@ -55,7 +55,7 @@ class ReflexionSelfReflection(
                     dedent("""
                      In this trial, you were unsuccessful. 
                      In a few sentences, diagnose a possible reason for failure and devise a new, concise, high level plan that aims to mitigate the same shortcomings. 
-                     Use complete sentences.""
+                     Use complete sentences.
                      """),
                 ),
             ]

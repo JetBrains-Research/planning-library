@@ -7,7 +7,7 @@ import yaml  # type: ignore[import-untyped]
 from typing import Dict, Any, Tuple, Optional, Sequence
 from gymnasium.core import SupportsFloat
 from .tools import get_alfworld_tools
-from planning_library.action_executors import DefaultActionExecutor
+from planning_library.action_executors import LangchainActionExecutor
 from textworld.gym.envs.textworld_batch import TextworldBatchGymEnv  # type: ignore[import-untyped]
 from langchain_core.callbacks import CallbackManager
 
@@ -25,7 +25,7 @@ class ALFWorldEnv(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
             config, train_eval="train"
         )
         self.env: TextworldBatchGymEnv = self._alfworld_env.init_env(batch_size=1)
-        self._action_executor = DefaultActionExecutor(
+        self._action_executor = LangchainActionExecutor(
             tools=get_alfworld_tools(env=self.env)
         )
 
@@ -59,7 +59,7 @@ class ALFWorldEnv(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
     ) -> Tuple[str, Dict[str, Any]]:
         if not options or "next_episode" not in options or not options["next_episode"]:
             self.env = self._alfworld_env.init_env(batch_size=1)
-            self._action_executor = DefaultActionExecutor(
+            self._action_executor = LangchainActionExecutor(
                 tools=get_alfworld_tools(env=self.env)
             )
 

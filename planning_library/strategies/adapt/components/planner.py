@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
 from typing import Optional
 
-from planning_library.action_executors import DefaultActionExecutor
+from planning_library.action_executors import LangchainActionExecutor
 from planning_library.strategies.adapt.utils import get_adapt_planner_tools
 from planning_library.strategies.adapt.utils.planner_tools import BaseADaPTPlannerTool
 from langchain_core.output_parsers import BaseOutputParser
@@ -307,7 +307,7 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
 
         strategy = SimpleStrategy.create(
             tools=tools,  # type: ignore[arg-type]
-            action_executor=DefaultActionExecutor(tools),  # type: ignore[arg-type]
+            action_executor=LangchainActionExecutor(tools),  # type: ignore[arg-type]
             agent=agent,
             return_intermediate_steps=return_intermediate_steps,
             return_finish_log=return_finish_log,

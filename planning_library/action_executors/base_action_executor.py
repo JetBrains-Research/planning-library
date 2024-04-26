@@ -22,12 +22,21 @@ class BaseActionExecutor(ABC):
         """Resets the current state. If actions are passed, will also execute them."""
         ...
 
+    @abstractmethod
+    async def areset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
+    ) -> None:
+        """Resets the current state. If actions are passed, will also execute them."""
+        ...
+
     @overload
     def execute(
         self,
         actions: List[AgentAction],
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -36,7 +45,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: AgentAction,
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -45,7 +53,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions.
@@ -64,7 +71,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: List[AgentAction],
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
@@ -73,7 +79,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: AgentAction,
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -82,7 +87,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions asynchronously.

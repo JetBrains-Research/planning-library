@@ -4,13 +4,18 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
 from typing import Optional
 
-from planning_library.action_executors import BaseActionExecutor, DefaultActionExecutor
+from planning_library.action_executors import (
+    BaseActionExecutor,
+    LangchainActionExecutor,
+    MetaTools,
+)
 from planning_library.components import RunnableComponent
 from planning_library.components.agent_component import AgentFactory
 from planning_library.strategies import SimpleStrategy
 from typing import Dict, Any, Tuple, List
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.runnables import Runnable, RunnableLambda
+from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 from typing_extensions import TypedDict
 from typing import Union, Sequence
 from langchain_core.language_models import BaseChatModel
@@ -37,6 +42,7 @@ class ADaPTExecutorConfig:
     runnable: Optional[Runnable] = None
     llm: Optional[BaseChatModel] = None
     tools: Optional[Sequence[BaseTool]] = None
+    meta_tools: Optional[MetaTools] = None
     prompt: Optional[ChatPromptTemplate] = None
     user_message: Optional[str] = None
     system_message: Optional[str] = None
@@ -59,9 +65,14 @@ class ADaPTExecutorConfig:
 class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
     name = "Executor"
 
-    def __init__(self, runnable: Runnable[ADaPTExecutorInput, ADaPTExecutorOutput]):
+    def __init__(
+        self,
+        runnable: Runnable[ADaPTExecutorInput, ADaPTExecutorOutput],
+        action_executor: BaseActionExecutor,
+    ):
         super().__init__(runnable)
         self.add_output_preprocessing(ADaPTExecutor._process_outputs)  # type: ignore[arg-type]
+        self._action_executor = action_executor
 
     @classmethod
     def _create_default_prompt(
@@ -112,7 +123,8 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
     def create_simple_strategy(
         cls,
         llm: BaseChatModel,
-        tools: Sequence[BaseTool],
+        tools: Optional[Sequence[BaseTool]] = None,
+        meta_tools: Optional[MetaTools] = None,
         action_executor: Optional[BaseActionExecutor] = None,
         prompt: Optional[ChatPromptTemplate] = None,
         user_message: Optional[str] = None,
@@ -135,6 +147,10 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
         ) -> Dict[str, Any]:
             return {**inputs["inputs"]}
 
+        if tools is None:
+            assert action_executor is not None, "Either pass tools or action executor."
+            tools = action_executor.tools
+
         prompt = cls._process_prompt(
             prompt=prompt, user_message=user_message, system_message=system_message
         )
@@ -147,7 +163,7 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
             tools=tools,
             action_executor=action_executor
             if action_executor is not None
-            else DefaultActionExecutor(tools),
+            else LangchainActionExecutor(tools, meta_tools=meta_tools),
             agent=agent,
             return_intermediate_steps=return_intermediate_steps,
             return_finish_log=return_finish_log,
@@ -157,4 +173,22 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
 
         runnable = RunnableLambda(_preprocess_input) | strategy
 
-        return cls(runnable=runnable)  # type: ignore[arg-type]
+        return cls(runnable=runnable, action_executor=action_executor)  # type: ignore[arg-type]
+
+    def reset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> None:
+        self._action_executor.reset(actions=actions, run_manager=run_manager, **kwargs)
+
+    async def areset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
+    ) -> None:
+        await self._action_executor.areset(
+            actions=actions, run_manager=run_manager, **kwargs
+        )

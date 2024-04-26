@@ -16,6 +16,8 @@ from langchain_core.callbacks import (
     CallbackManagerForChainRun,
 )
 
+from planning_library.action_executors.meta_tools import MetaTools
+
 
 class BaseCustomStrategy(Chain, ABC):
     return_intermediate_steps: bool = False
@@ -39,6 +41,7 @@ class BaseCustomStrategy(Chain, ABC):
     @abstractmethod
     def create(
         cls,
+        meta_tools: Optional[MetaTools] = None,
         return_intermediate_steps: bool = False,
         return_finish_log: bool = False,
         max_iterations: int = 15,
