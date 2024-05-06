@@ -40,7 +40,7 @@ class LangchainActionExecutor(BaseActionExecutor):
     ) -> None:
         """Resets the current state. If actions are passed, will also execute them."""
         if self.reset_tool_name is not None:
-            self.execute(
+            self._execute(
                 actions=[
                     AgentAction(
                         tool=self.reset_tool_name,
@@ -48,6 +48,7 @@ class LangchainActionExecutor(BaseActionExecutor):
                         log="Invoking reset tool.",
                     )
                 ],
+                tool_executor=self._meta_tool_executor,
                 run_manager=run_manager,
             )
             if actions:
@@ -69,30 +70,35 @@ class LangchainActionExecutor(BaseActionExecutor):
         **kwargs,
     ) -> AgentStep: ...
 
+    def _execute(
+        self,
+        actions: List[AgentAction] | AgentAction,
+        tool_executor: ToolExecutor,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> List[AgentStep] | AgentStep:
+        if isinstance(actions, list):
+            steps = []
+            for action in actions:
+                assert isinstance(action, AgentAction)
+                observation = self.execute(action, run_manager=run_manager)
+                steps.append(AgentStep(action=action, observation=observation))
+            return steps
+
+        assert isinstance(actions, AgentAction)
+        observation = tool_executor.invoke(
+            actions,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
+        return AgentStep(action=actions, observation=observation)
+
     def execute(
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[CallbackManager] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
-        if isinstance(actions, list):
-            observations = [
-                self.execute(action, run_manager=run_manager) for action in actions
-            ]
-        else:
-            observations = self._tool_executor.invoke(
-                actions,
-                config={"callbacks": run_manager} if run_manager else {},
-            )
-        if isinstance(observations, list):
-            assert isinstance(actions, list)
-            return [
-                AgentStep(action=action, observation=observation)
-                for action, observation in zip(actions, observations)
-            ]
-
-        assert isinstance(actions, AgentAction)
-        return AgentStep(action=actions, observation=observations)
+        return self._execute(actions, self._tool_executor, run_manager)
 
     async def areset(
         self,
@@ -102,7 +108,7 @@ class LangchainActionExecutor(BaseActionExecutor):
     ) -> None:
         """Resets the current state. If actions are passed, will also execute them."""
         if self.reset_tool_name is not None:
-            await self.aexecute(
+            await self._aexecute(
                 actions=[
                     AgentAction(
                         tool=self.reset_tool_name,
@@ -110,6 +116,7 @@ class LangchainActionExecutor(BaseActionExecutor):
                         log="Invoking reset tool.",
                     )
                 ],
+                tool_executor=self._meta_tool_executor,
                 run_manager=run_manager,
             )
             if actions:
@@ -131,21 +138,33 @@ class LangchainActionExecutor(BaseActionExecutor):
         **kwargs,
     ) -> AgentStep: ...
 
+    async def _aexecute(
+        self,
+        actions: List[AgentAction] | AgentAction,
+        tool_executor: ToolExecutor,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
+    ) -> List[AgentStep] | AgentStep:
+        if isinstance(actions, list):
+            steps = []
+            for action in actions:
+                observation = await tool_executor.ainvoke(
+                    action,
+                    config={"callbacks": run_manager} if run_manager else {},
+                )
+                steps.append(AgentStep(action=action, observation=observation))
+            return steps
+        assert isinstance(actions, AgentAction)
+        observation = await tool_executor.ainvoke(
+            actions,
+            config={"callbacks": run_manager} if run_manager else {},
+        )
+        return AgentStep(action=actions, observation=observation)
+
     async def aexecute(
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[AsyncCallbackManager] = None,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
-        observations = await self._tool_executor.ainvoke(
-            actions,
-            config={"callbacks": run_manager} if run_manager else {},
-        )
-        if isinstance(observations, list):
-            assert isinstance(actions, list)
-            return [
-                AgentStep(action=action, observation=observation)
-                for action, observation in zip(actions, observations)
-            ]
-        assert isinstance(actions, AgentAction)
-        return AgentStep(action=actions, observation=observations)
+        return await self._aexecute(actions, self._tool_executor, run_manager)
