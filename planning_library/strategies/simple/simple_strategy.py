@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from langchain_core.agents import AgentFinish, AgentAction, AgentStep
-from langchain_core.callbacks import (
-    CallbackManagerForChainRun,
-    AsyncCallbackManagerForChainRun,
-)
+from typing import AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
-from planning_library.strategies import BaseCustomStrategy
+from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_core.agents import AgentAction, AgentFinish, AgentStep
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForChainRun,
+    CallbackManagerForChainRun,
+)
+from langchain_core.tools import BaseTool
+
 from planning_library.action_executors import (
     BaseActionExecutor,
     LangchainActionExecutor,
     MetaTools,
 )
-
-from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
-from langchain_core.tools import BaseTool
-from typing import Union, Sequence, Optional, Dict, Iterator, Tuple, List, AsyncIterator
+from planning_library.strategies import BaseCustomStrategy
 
 
 class SimpleStrategy(BaseCustomStrategy):
@@ -93,20 +93,15 @@ class SimpleStrategy(BaseCustomStrategy):
             )
 
             if isinstance(action_results, AgentStep):
-                intermediate_steps.append(
-                    (action_results.action, action_results.observation)
-                )
+                intermediate_steps.append((action_results.action, action_results.observation))
             else:
                 intermediate_steps.extend(
-                    (_action_results.action, _action_results.observation)
-                    for _action_results in action_results
+                    (_action_results.action, _action_results.observation) for _action_results in action_results
                 )
 
             cur_iteration += 1
 
-        stopped_outcome = AgentFinish(
-            {"output": "Agent stopped due to iteration limit."}, ""
-        )
+        stopped_outcome = AgentFinish({"output": "Agent stopped due to iteration limit."}, "")
 
         yield stopped_outcome, intermediate_steps
         return
@@ -133,20 +128,15 @@ class SimpleStrategy(BaseCustomStrategy):
             action_results = await self.action_executor.aexecute(agent_outcome)
 
             if isinstance(action_results, AgentStep):
-                intermediate_steps.append(
-                    (action_results.action, action_results.observation)
-                )
+                intermediate_steps.append((action_results.action, action_results.observation))
             else:
                 intermediate_steps.extend(
-                    (_action_results.action, _action_results.observation)
-                    for _action_results in action_results
+                    (_action_results.action, _action_results.observation) for _action_results in action_results
                 )
 
             cur_iteration += 1
 
-        stopped_outcome = AgentFinish(
-            {"output": "Agent stopped due to iteration limit."}, ""
-        )
+        stopped_outcome = AgentFinish({"output": "Agent stopped due to iteration limit."}, "")
 
         yield stopped_outcome, intermediate_steps
         return

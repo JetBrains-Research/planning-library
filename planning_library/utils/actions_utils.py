@@ -14,9 +14,7 @@ def get_tools_maps(
     tools: Sequence[BaseTool],
 ) -> Tuple[Dict[str, BaseTool], Dict[str, str]]:
     name_to_tool_map = {tool.name: tool for tool in tools}
-    color_mapping = get_color_mapping(
-        [tool.name for tool in tools], excluded_colors=["green"]
-    )
+    color_mapping = get_color_mapping([tool.name for tool in tools], excluded_colors=["green"])
     return name_to_tool_map, color_mapping
 
 

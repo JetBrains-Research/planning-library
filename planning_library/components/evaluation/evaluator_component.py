@@ -1,19 +1,19 @@
-from typing import Optional, Dict, Generic, Type, Callable, Awaitable
+from typing import Awaitable, Callable, Dict, Generic, Optional, Type
 
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
-from langchain_core.output_parsers import BaseOutputParser
-from langchain_core.runnables import Runnable
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.language_models import BaseChatModel
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from ..base_component import BaseComponent, InputType, OutputType
-from planning_library.primitives.output_parsers import SimpleEvaluateOutputParser
-from .threshold_judge import LeqThresholdJudge, GeqThresholdJudge
+from langchain_core.runnables import Runnable
+
 from planning_library.components.runnable_component import RunnableComponent
+from planning_library.primitives.output_parsers import SimpleEvaluateOutputParser
+
+from ..base_component import BaseComponent, InputType, OutputType
+from .threshold_judge import GeqThresholdJudge, LeqThresholdJudge
 
 
-class EvaluatorComponent(
-    Generic[InputType, OutputType], BaseComponent[InputType, bool]
-):
+class EvaluatorComponent(Generic[InputType, OutputType], BaseComponent[InputType, bool]):
     def __init__(
         self,
         backbone: BaseComponent[InputType, OutputType],
@@ -36,16 +36,12 @@ class EvaluatorComponent(
     ) -> None:
         self.judge.add_output_preprocessing(preprocess, apreprocess)
 
-    def invoke(
-        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
-    ) -> bool:
+    def invoke(self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs) -> bool:
         if "run_name" not in kwargs and self.name:
             kwargs["run_name"] = self.name
 
         backbone_output = self.backbone.invoke(inputs, run_manager, **kwargs)
-        should_continue = self.judge.invoke(
-            {"backbone_output": backbone_output}, run_manager
-        )
+        should_continue = self.judge.invoke({"backbone_output": backbone_output}, run_manager)
         return should_continue
 
     async def ainvoke(
@@ -58,9 +54,7 @@ class EvaluatorComponent(
             kwargs["run_name"] = self.name
 
         backbone_output = await self.backbone.ainvoke(inputs, run_manager, **kwargs)
-        should_continue = await self.judge.ainvoke(
-            {"backbone_output": backbone_output}, run_manager
-        )
+        should_continue = await self.judge.ainvoke({"backbone_output": backbone_output}, run_manager)
         return should_continue
 
     @classmethod
@@ -74,9 +68,7 @@ class EvaluatorComponent(
         system_message: Optional[str] = None,
         output_parser: Optional[BaseOutputParser[float]] = None,
     ) -> "EvaluatorComponent[InputType, float]":
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
 
         if output_parser is None:
             output_parser = SimpleEvaluateOutputParser()
@@ -95,15 +87,11 @@ class EvaluatorComponent(
         threshold_mode: str,
     ) -> "EvaluatorComponent[InputType, float]":
         if threshold_mode == "leq":
-            judge: BaseComponent[Dict[str, float], bool] = LeqThresholdJudge(
-                threshold=threshold
-            )
+            judge: BaseComponent[Dict[str, float], bool] = LeqThresholdJudge(threshold=threshold)
         elif threshold_mode == "geq":
             judge = GeqThresholdJudge(threshold=threshold)
         else:
-            raise ValueError(
-                f"Unknown `threshold_mode` {threshold_mode} when initializing {cls.__name__}."
-            )
+            raise ValueError(f"Unknown `threshold_mode` {threshold_mode} when initializing {cls.__name__}.")
 
         backbone = RunnableComponent(runnable)
         return cls(backbone=backbone, judge=judge)

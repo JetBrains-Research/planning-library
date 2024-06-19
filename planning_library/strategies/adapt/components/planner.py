@@ -1,38 +1,34 @@
 from __future__ import annotations
 
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional
+from typing import Any, Dict, Optional, Sequence, Union
+
+from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
+from langchain_core.language_models import BaseChatModel
+from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import Runnable, RunnableLambda
+from langchain_core.tools import BaseTool
 
 from planning_library.action_executors import LangchainActionExecutor
-from planning_library.strategies.adapt.utils import get_adapt_planner_tools
-from planning_library.strategies.adapt.utils.planner_tools import BaseADaPTPlannerTool
-from langchain_core.output_parsers import BaseOutputParser
 from planning_library.components import BaseComponent, RunnableComponent
 from planning_library.components.agent_component import AgentFactory
-from planning_library.strategies import SimpleStrategy
-from typing import Dict, Any
-from langchain_core.runnables import Runnable, RunnableLambda
-from typing import Union, Sequence
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
-from planning_library.utils import format_thought
-from langchain.agents.agent import RunnableAgent, RunnableMultiActionAgent
-
 from planning_library.function_calling_parsers import (
-    BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
     ParserRegistry,
 )
-from dataclasses import dataclass
-
-
+from planning_library.strategies import SimpleStrategy
 from planning_library.strategies.adapt.utils import (
     ADaPTPlannerInput,
     ADaPTPlannerOutput,
     SimplePlannerOutputParser,
+    get_adapt_planner_tools,
 )
+from planning_library.strategies.adapt.utils.planner_tools import BaseADaPTPlannerTool
+from planning_library.utils import format_thought
 
 
 @dataclass
@@ -104,12 +100,10 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         ]
 
         if mode == "agent":
-            return ChatPromptTemplate.from_messages(
-                base_messages
-                + [
-                    (
-                        "human",
-                        dedent("""
+            base_messages += [
+                (
+                    "human",
+                    dedent("""
                             The trial above was unsuccessful. Your goal is to construct a step-by-step plan to successfully solve the original task.
                             Plan is a list of subtasks with the logic of how the subtasks' results should be aggregated.
     
@@ -124,18 +118,15 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
     
                             You are given access to a set of tools to help with the plan construction. ALWAYS use tools, refrain from using tools only when you are done.                          
                             """),
-                    ),
-                    MessagesPlaceholder("agent_scratchpad"),
-                ]
-            )
+                ),
+                MessagesPlaceholder("agent_scratchpad"),
+            ]
 
         elif mode == "simple":
-            return ChatPromptTemplate.from_messages(
-                base_messages
-                + [
-                    (
-                        "human",
-                        dedent("""
+            base_messages += [
+                (
+                    "human",
+                    dedent("""
                             The trial above was unsuccessful. Your goal is to construct a step-by-step plan to successfully solve the original task.
                             Plan is a list of subtasks with the logic of how the subtasks' results should be aggregated.
 
@@ -158,10 +149,14 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
                              "aggregation_mode": "<aggregation mode>"}}
                             ```    
                             """),
-                    ),
-                ]
-            )
-        raise NotImplementedError("Currently, only agentic planner is supported.")
+                ),
+            ]
+        else:
+            raise NotImplementedError(f"Unsupported mode {mode}.")
+
+        return ChatPromptTemplate.from_messages(
+            base_messages  # type: ignore[arg-type]
+        )
 
     def invoke(
         self,
@@ -170,22 +165,16 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         **kwargs,
     ) -> ADaPTPlannerOutput:
         if self.mode == "agent":
-            assert (
-                self.tools is not None and len(self.tools) > 0
-            ), "Tools have to be defined for agentic mode."
+            assert self.tools is not None and len(self.tools) > 0, "Tools have to be defined for agentic mode."
             plan = self.tools[0].plan
             plan.clear()
-            _ = self.runnable.invoke(
-                inputs, run_manager=run_manager, run_name=self.name
-            )
+            _ = self.runnable.invoke(inputs, run_manager=run_manager, run_name=self.name)
             return {
                 "subtasks": plan.subtasks,
                 "aggregation_mode": plan.aggregation_mode,
             }
         if self.mode == "simple":
-            return self.runnable.invoke(
-                inputs, run_manager=run_manager, run_name=self.name
-            )
+            return self.runnable.invoke(inputs, run_manager=run_manager, run_name=self.name)
 
         raise NotImplementedError(
             "Currently, only `agent` (with tools) and `simple` (a single call to llm) modes for the planner are supported."
@@ -198,22 +187,16 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         **kwargs,
     ) -> ADaPTPlannerOutput:
         if self.mode == "agent":
-            assert (
-                self.tools is not None and len(self.tools) > 0
-            ), "Tools have to be defined for agentic mode."
+            assert self.tools is not None and len(self.tools) > 0, "Tools have to be defined for agentic mode."
             plan = self.tools[0].plan
             plan.clear()
-            _ = await self.runnable.ainvoke(
-                inputs, run_manager=run_manager, run_name=self.name
-            )
+            _ = await self.runnable.ainvoke(inputs, run_manager=run_manager, run_name=self.name)
             return {
                 "subtasks": plan.subtasks,
                 "aggregation_mode": plan.aggregation_mode,
             }
         if self.mode == "simple":
-            return await self.runnable.ainvoke(
-                inputs, run_manager=run_manager, run_name=self.name
-            )
+            return await self.runnable.ainvoke(inputs, run_manager=run_manager, run_name=self.name)
 
         raise NotImplementedError("Currently, only agentic planner is supported.")
 
@@ -233,13 +216,9 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         ] = None,
         parser_name: Optional[str] = None,
     ) -> Union[RunnableAgent, RunnableMultiActionAgent]:
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
 
-        return AgentFactory.create_agent(
-            llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name
-        )
+        return AgentFactory.create_agent(llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name)
 
     @classmethod
     def create_agent_planner(
@@ -287,9 +266,7 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
 
             return {
                 **inputs["inputs"],
-                "executor_agent_outcome": format_thought(
-                    inputs["executor_agent_outcome"]
-                ),
+                "executor_agent_outcome": format_thought(inputs["executor_agent_outcome"]),
                 "executor_intermediate_steps": executor_intermediate_steps,
             }
 
@@ -353,9 +330,7 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
 
             return {
                 **inputs["inputs"],
-                "executor_agent_outcome": format_thought(
-                    inputs["executor_agent_outcome"]
-                ),
+                "executor_agent_outcome": format_thought(inputs["executor_agent_outcome"]),
                 "executor_intermediate_steps": executor_intermediate_steps,
             }
 
@@ -369,8 +344,6 @@ class ADaPTPlanner(BaseComponent[ADaPTPlannerInput, ADaPTPlannerOutput]):
         if output_parser is None:
             output_parser = SimplePlannerOutputParser()
 
-        runnable = RunnableComponent.create_from_steps(
-            prompt=prompt, llm=llm, output_parser=output_parser
-        )
+        runnable = RunnableComponent.create_from_steps(prompt=prompt, llm=llm, output_parser=output_parser)
         runnable.add_input_preprocessing(_preprocess_input)
         return cls(runnable=runnable, mode="simple")

@@ -1,9 +1,10 @@
+from textwrap import dedent
+
 from langchain.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
 )
 from langchain_core.output_parsers import BaseOutputParser
-from textwrap import dedent
 
 self_reflection_prompt = ChatPromptTemplate.from_messages(
     [

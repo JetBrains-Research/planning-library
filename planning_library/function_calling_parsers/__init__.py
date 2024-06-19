@@ -1,6 +1,6 @@
 from .base_parser import (
-    BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
 )
 from .openai_functions_parser import OpenAIFunctionsParser
 from .openai_tools_parser import OpenAIToolsParser

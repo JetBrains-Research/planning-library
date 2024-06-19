@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 from typing import (
     Any,
@@ -56,12 +57,17 @@ class BaseCustomStrategy(Chain, ABC):
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]: ...
 
-    @abstractmethod
-    def _arun_strategy(
+    async def _arun_strategy(
         self,
         inputs: Dict[str, str],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
-    ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]: ...
+    ) -> AsyncIterator[Tuple[AgentFinish, List[Tuple[AgentAction, str]]]]:
+        loop = asyncio.get_event_loop()
+
+        sync_run_manager = run_manager.get_sync() if run_manager is not None else None
+        result = await loop.run_in_executor(None, self._run_strategy, inputs, sync_run_manager)
+        for item in result:
+            yield item
 
     def _return(
         self,
@@ -85,9 +91,7 @@ class BaseCustomStrategy(Chain, ABC):
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
         if run_manager:
-            await run_manager.on_agent_finish(
-                output, color="green", verbose=self.verbose
-            )
+            await run_manager.on_agent_finish(output, color="green", verbose=self.verbose)
         final_output = output.return_values
         if self.return_intermediate_steps:
             final_output["intermediate_steps"] = intermediate_steps
@@ -126,9 +130,7 @@ class BaseCustomStrategy(Chain, ABC):
 
         outputs = []
         async for _output, _intermediate_steps in _outputs:
-            output = await self._areturn(
-                _output, _intermediate_steps, run_manager=run_manager
-            )
+            output = await self._areturn(_output, _intermediate_steps, run_manager=run_manager)
             outputs.append(output)
 
         return {key: [output[key] for output in outputs] for key in outputs[0]}

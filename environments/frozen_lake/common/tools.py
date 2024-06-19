@@ -1,10 +1,9 @@
 from textwrap import dedent
-from typing import Any, Literal, Tuple, Type, Dict
+from typing import Any, Dict, Literal, SupportsFloat, Tuple, Type
 
 import gymnasium as gym
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
-from gymnasium.core import SupportsFloat
 
 
 class BaseFrozenLakeTool(BaseModel):
@@ -19,9 +18,7 @@ class BaseFrozenLakeTool(BaseModel):
 
 
 class MoveInput(BaseModel):
-    direction: Literal["left", "right", "down", "up"] = Field(
-        description="Which direction to move."
-    )
+    direction: Literal["left", "right", "down", "up"] = Field(description="Which direction to move.")
 
 
 class MoveTool(BaseFrozenLakeTool, BaseTool):
@@ -35,12 +32,10 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
     * truncated: if True, the time limit has been exceeded;
     * info: probability of moving in the wrong direction for the current cell (ice is slippery!)"""
     )
-    args_schema: Type[BaseModel] = MoveInput
+    args_schema: Type[BaseModel] = MoveInput  # type: ignore
 
     @staticmethod
-    def _convert_frozenlake_observation_to_position(
-        observation: int, nrow: int
-    ) -> Tuple[int, int]:
+    def _convert_frozenlake_observation_to_position(observation: int, nrow: int) -> Tuple[int, int]:
         # FrozenLake: observation = current_row * nrow + current_col
         current_row, current_col = observation // nrow, observation % nrow
         return current_col, current_row
@@ -68,16 +63,12 @@ class MoveTool(BaseFrozenLakeTool, BaseTool):
             MoveTool._convert_direction_to_frozenlake(direction)
         )
         nrow = self.env.get_wrapper_attr("nrow")
-        observation = MoveTool._convert_frozenlake_observation_to_position(
-            observation=_observation, nrow=nrow
-        )
+        observation = MoveTool._convert_frozenlake_observation_to_position(observation=_observation, nrow=nrow)
         return observation, reward, terminated, truncated, info
 
 
 class LookInput(BaseModel):
-    direction: Literal["left", "right", "down", "up"] = Field(
-        description="Which direction to look at."
-    )
+    direction: Literal["left", "right", "down", "up"] = Field(description="Which direction to look at.")
 
 
 class LookTool(BaseFrozenLakeTool, BaseTool):
@@ -90,7 +81,7 @@ class LookTool(BaseFrozenLakeTool, BaseTool):
     * F - frozen cell;
     * G - goal.
     """)
-    args_schema: Type[BaseModel] = LookInput
+    args_schema: Type[BaseModel] = LookInput  # type: ignore
 
     def _run(
         self,
@@ -113,9 +104,7 @@ class LookTool(BaseFrozenLakeTool, BaseTool):
         elif direction == "up":
             observation = "out of bounds" if y == 0 else board[x][y - 1].decode()
         else:
-            raise ValueError(
-                "Wrong direction; expected one of: 'left', 'right', 'down', 'up'."
-            )
+            raise ValueError("Wrong direction; expected one of: 'left', 'right', 'down', 'up'.")
 
         info: Dict[str, Any]
         reward, terminated, truncated, info = (
@@ -147,7 +136,7 @@ class CheckMapTool(BaseFrozenLakeTool, BaseTool):
     SH
     FG
     """)
-    args_schema: Type[BaseModel] = CheckMapInput
+    args_schema: Type[BaseModel] = CheckMapInput  # type: ignore
 
     def _run(
         self,
@@ -156,10 +145,7 @@ class CheckMapTool(BaseFrozenLakeTool, BaseTool):
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
         info: Dict[str, Any]
         observation, reward, terminated, truncated, info = (
-            "\n".join(
-                "".join(x.decode() for x in y)
-                for y in self.env.get_wrapper_attr("desc")
-            ),
+            "\n".join("".join(x.decode() for x in y) for y in self.env.get_wrapper_attr("desc")),
             0,
             False,
             False,
@@ -174,7 +160,7 @@ class CheckPositionInput(BaseModel): ...
 class CheckPositionTool(BaseFrozenLakeTool, BaseTool):
     name = "check_position"
     description = """Peeks at current position map without changing its state."""
-    args_schema: Type[BaseModel] = CheckMapInput
+    args_schema: Type[BaseModel] = CheckMapInput  # type: ignore
 
     def _run(
         self,

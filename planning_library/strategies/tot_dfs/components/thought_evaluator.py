@@ -1,23 +1,26 @@
 from __future__ import annotations
-from planning_library.components.evaluation import EvaluatorComponent
-from typing import Tuple, Dict, Any, List, Optional, Generic, Type, Union
-from planning_library.components.base_component import OutputType
+
+from dataclasses import dataclass
+from textwrap import dedent
+from typing import Any, Dict, Generic, List, Optional, Tuple, Type, Union
+
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
+from typing_extensions import TypedDict
+
+from planning_library.components.base_component import OutputType
+from planning_library.components.evaluation import EvaluatorComponent
+from planning_library.function_calling_parsers import (
+    BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
+    ParserRegistry,
+)
 from planning_library.utils import (
     format_thought,
 )
-from textwrap import dedent
-from planning_library.function_calling_parsers import (
-    ParserRegistry,
-    BaseFunctionCallingMultiActionParser,
-    BaseFunctionCallingSingleActionParser,
-)
-from typing_extensions import TypedDict
-from dataclasses import dataclass
 
 
 @dataclass
@@ -49,17 +52,13 @@ class ThoughtEvaluatorInput(TypedDict):
     next_thought: List[AgentAction] | AgentAction | AgentFinish
 
 
-class ThoughtEvaluator(
-    Generic[OutputType], EvaluatorComponent[ThoughtEvaluatorInput, OutputType]
-):
+class ThoughtEvaluator(Generic[OutputType], EvaluatorComponent[ThoughtEvaluatorInput, OutputType]):
     name = "Evaluate Thoughts"
 
     required_prompt_input_vars = set(ThoughtEvaluatorInput.__annotations__) - {"inputs"}
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
             system_message = (
                 "You are an advanced reasoning assistant that judges the plausability of "
@@ -104,9 +103,7 @@ class ThoughtEvaluator(
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
         output_parser: Optional[BaseOutputParser[float]] = None,
-        parser: Optional[
-            BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser
-        ] = None,
+        parser: Optional[BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser] = None,
         parser_name: Optional[str] = None,
     ) -> "ThoughtEvaluator[float]":
         def _preprocess_input(

@@ -1,24 +1,26 @@
 from __future__ import annotations
+
+from collections import defaultdict
+from dataclasses import dataclass
+from itertools import combinations
 from textwrap import dedent
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.language_models import BaseChatModel
-from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.messages import BaseMessage
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
-from itertools import combinations
-from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
+from typing_extensions import TypedDict
+
 from planning_library.components import BaseComponent, RunnableComponent
 from planning_library.function_calling_parsers import (
     BaseFunctionCallingMultiActionParser,
     BaseFunctionCallingSingleActionParser,
     ParserRegistry,
 )
-from typing_extensions import TypedDict
-from dataclasses import dataclass
-from collections import defaultdict
 from planning_library.utils import (
     format_thought,
 )
@@ -57,11 +59,7 @@ class ThoughtSorterRunnableInput(TypedDict):
     thought2: List[BaseMessage]
 
 
-class ThoughtSorter(
-    BaseComponent[
-        ThoughtSorterInput, List[Union[List[AgentAction], AgentAction, AgentFinish]]
-    ]
-):
+class ThoughtSorter(BaseComponent[ThoughtSorterInput, List[Union[List[AgentAction], AgentAction, AgentFinish]]]):
     """
     ToT+DFS component responsible for sorting the candidate thought on each DFS step.
 
@@ -77,17 +75,14 @@ class ThoughtSorter(
 
     def __init__(
         self,
-        runnable: Runnable[ThoughtSorterRunnableInput, str]
-        | RunnableComponent[ThoughtSorterRunnableInput, str],
+        runnable: Runnable[ThoughtSorterRunnableInput, str] | RunnableComponent[ThoughtSorterRunnableInput, str],
     ):
         if not isinstance(runnable, RunnableComponent):
             runnable = RunnableComponent(runnable)
         self.runnable = runnable
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
             system_message = (
                 "You are an advanced reasoning assistant that compares the "
@@ -168,12 +163,8 @@ class ThoughtSorter(
         run_manager: Optional[CallbackManager] = None,
         **kwargs,
     ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
-        scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = (
-            defaultdict(float)
-        )
-        for thought1, thought2 in [
-            pair for pair in combinations(inputs["thoughts"], 2)
-        ]:
+        scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = defaultdict(float)
+        for thought1, thought2 in [pair for pair in combinations(inputs["thoughts"], 2)]:
             result = self._compare_pairwise(
                 inputs=inputs["inputs"],
                 intermediate_steps=inputs["intermediate_steps"],
@@ -200,12 +191,8 @@ class ThoughtSorter(
         run_manager: Optional[AsyncCallbackManager] = None,
         **kwargs,
     ) -> List[Union[List[AgentAction], AgentAction, AgentFinish]]:
-        scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = (
-            defaultdict(float)
-        )
-        for thought1, thought2 in [
-            pair for pair in combinations(inputs["thoughts"], 2)
-        ]:
+        scores: Dict[Union[List[AgentAction], AgentAction, AgentFinish], float] = defaultdict(float)
+        for thought1, thought2 in [pair for pair in combinations(inputs["thoughts"], 2)]:
             result = await self._acompare_pairwise(
                 inputs=inputs["inputs"],
                 intermediate_steps=inputs["intermediate_steps"],

@@ -1,9 +1,11 @@
+from abc import ABC
 from textwrap import dedent
-from typing import Any, Type, Optional, List, Literal
-from planning_library.strategies.adapt.utils import ADaPTPlan
+from typing import Any, List, Literal, Optional, Type
+
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
-from abc import ABC
+
+from planning_library.strategies.adapt.utils import ADaPTPlan
 
 
 class BaseADaPTPlannerTool(BaseTool, BaseModel, ABC):
@@ -25,27 +27,21 @@ class CheckPlanTool(BaseADaPTPlannerTool):
 
     class CheckPlanInput(BaseModel): ...
 
-    args_schema: Type[BaseModel] = CheckPlanInput
+    args_schema: Type[BaseModel] = CheckPlanInput  # type: ignore
 
     def _run(self, *args: Any, **kwargs: Any) -> str:
         if len(self.plan.subtasks) == 0:
             observation = ["Currently, the plan doesn't contain any subtasks."]
         else:
-            observation = [
-                f"Currently, the plan contains {len(self.plan.subtasks)} subtasks."
-            ]
+            observation = [f"Currently, the plan contains {len(self.plan.subtasks)} subtasks."]
 
             for i, subtask in enumerate(self.plan.subtasks):
                 observation.append(f"{i + 1}. {subtask}")
 
         if self.plan.aggregation_mode is None:
-            observation.append(
-                "The current subtasks results aggregation mode is not defined yet."
-            )
+            observation.append("The current subtasks results aggregation mode is not defined yet.")
         else:
-            observation.append(
-                f"The current subtasks results aggregation mode is set to {self.plan.aggregation_mode}."
-            )
+            observation.append(f"The current subtasks results aggregation mode is set to {self.plan.aggregation_mode}.")
         return "\n".join(observation)
 
 
@@ -65,7 +61,7 @@ class AddTaskTool(BaseADaPTPlannerTool):
             default=None,
         )
 
-    args_schema: Type[BaseModel] = AddTaskInput
+    args_schema: Type[BaseModel] = AddTaskInput  # type: ignore
 
     def _run(
         self,
@@ -87,9 +83,7 @@ class AddTaskTool(BaseADaPTPlannerTool):
 
 class EditTaskTool(BaseADaPTPlannerTool):
     name = "edit_task"
-    description = dedent(
-        """Changes the formulation of the existing subtask in the current plan."""
-    )
+    description = dedent("""Changes the formulation of the existing subtask in the current plan.""")
 
     class EditTaskInput(BaseModel):
         task_inputs: str = Field(
@@ -101,11 +95,9 @@ class EditTaskTool(BaseADaPTPlannerTool):
                 Note that the indexing starts with 0."""),
         )
 
-    args_schema: Type[BaseModel] = EditTaskInput
+    args_schema: Type[BaseModel] = EditTaskInput  # type: ignore
 
-    def _run(
-        self, task_inputs: str, task_position: int, *args: Any, **kwargs: Any
-    ) -> str:
+    def _run(self, task_inputs: str, task_position: int, *args: Any, **kwargs: Any) -> str:
         try:
             self.plan.subtasks[task_position] = task_inputs
             return f"Successfully edited the subtask at position {task_position} in the current plan."
@@ -122,7 +114,7 @@ class RemoveTaskTool(BaseADaPTPlannerTool):
             description="The position in the plan to delete the subtask from. Note that the indexing starts with 0."
         )
 
-    args_schema: Type[BaseModel] = RemoveTaskInput
+    args_schema: Type[BaseModel] = RemoveTaskInput  # type: ignore
 
     def _run(self, task_position: int, *args: Any, **kwargs: Any) -> str:
         try:
@@ -146,11 +138,9 @@ class DefineAggregationModeTool(BaseADaPTPlannerTool):
             """)
         )
 
-    args_schema: Type[BaseModel] = DefineAggregationModeInput
+    args_schema: Type[BaseModel] = DefineAggregationModeInput  # type: ignore
 
-    def _run(
-        self, aggregation_mode: Literal["and", "or"], *args: Any, **kwargs: Any
-    ) -> str:
+    def _run(self, aggregation_mode: Literal["and", "or"], *args: Any, **kwargs: Any) -> str:
         self.plan.aggregation_mode = aggregation_mode
         return f"Successfully set aggregation mode to {aggregation_mode}"
 

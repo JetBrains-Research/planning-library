@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import List
+
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage
 
 
 def format_thought(
@@ -14,17 +15,9 @@ def format_thought(
             messages.extend(format_thought(action))
         return messages
     elif isinstance(thought, AgentAction):
-        return [
-            AIMessage(
-                content=f"Call tool `{thought.tool}` with arguments `{thought.tool_input}`"
-            )
-        ]
+        return [AIMessage(content=f"Call tool `{thought.tool}` with arguments `{thought.tool_input}`")]
     elif isinstance(thought, AgentFinish):
-        return [
-            AIMessage(
-                content=f"Finish execution with return values `{thought.return_values}`"
-            )
-        ]
+        return [AIMessage(content=f"Finish execution with return values `{thought.return_values}`")]
 
     raise ValueError(f"Unexpected type for `thought`: {type(thought)}")
 

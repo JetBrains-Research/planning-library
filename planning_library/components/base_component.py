@@ -1,6 +1,7 @@
-from typing import Generic, TypeVar, Optional, Mapping, Set, Dict, Callable, Awaitable
 from abc import ABC, abstractmethod
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
+from typing import Awaitable, Callable, Dict, Generic, Mapping, Optional, Set, TypeVar
+
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.prompts import ChatPromptTemplate
 
 InputType = TypeVar("InputType", bound=Mapping)
@@ -12,9 +13,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
     required_prompt_input_vars: Set[str] = set()
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         raise NotImplementedError(
             f"Default prompt is not supported for {cls.__name__}. Please, provide `prompt` instead of `user_message`."
         )
@@ -29,18 +28,12 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
     ) -> ChatPromptTemplate:
         if prompt is None:
             if user_message is None:
-                raise ValueError(
-                    "Either `prompt` or `user_message` are required to create an agent."
-                )
-            prompt = cls._create_default_prompt(
-                system_message=system_message, user_message=user_message, **kwargs
-            )
+                raise ValueError("Either `prompt` or `user_message` are required to create an agent.")
+            prompt = cls._create_default_prompt(system_message=system_message, user_message=user_message, **kwargs)
 
         missing_vars = cls.required_prompt_input_vars.difference(prompt.input_variables)
         if missing_vars:
-            raise ValueError(
-                f"Prompt for {cls.__name__} missing required variables: {missing_vars}"
-            )
+            raise ValueError(f"Prompt for {cls.__name__} missing required variables: {missing_vars}")
 
         return prompt
 
@@ -57,9 +50,7 @@ class BaseComponent(Generic[InputType, OutputType], ABC):
     ) -> None: ...
 
     @abstractmethod
-    def invoke(
-        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
-    ) -> OutputType: ...
+    def invoke(self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs) -> OutputType: ...
 
     @abstractmethod
     async def ainvoke(

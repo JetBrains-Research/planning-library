@@ -1,22 +1,24 @@
 from __future__ import annotations
-from typing import Tuple, Dict, Any, List, Union, Optional, Sequence
 
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+
 from langchain.agents import BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
+from langchain_core.language_models import BaseChatModel
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import BaseTool
 from typing_extensions import TypedDict
-from planning_library.components import BaseComponent, AgentComponent
+
+from planning_library.components import AgentComponent, BaseComponent
 from planning_library.function_calling_parsers import (
-    BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
 )
 from planning_library.utils import (
     format_thoughts,
 )
-from dataclasses import dataclass
 
 
 @dataclass
@@ -50,11 +52,7 @@ class ThoughtGeneratorAgentInput(ThoughtGeneratorInput):
     previous_thoughts: List[List[AgentAction] | AgentAction | AgentFinish]
 
 
-class ThoughtGenerator(
-    BaseComponent[
-        ThoughtGeneratorInput, List[Union[List[AgentAction], AgentAction, AgentFinish]]
-    ]
-):
+class ThoughtGenerator(BaseComponent[ThoughtGeneratorInput, List[Union[List[AgentAction], AgentAction, AgentFinish]]]):
     name = "Generate Thoughts"
 
     required_prompt_input_vars = set(ThoughtGeneratorInput.__annotations__) - {
@@ -73,9 +71,7 @@ class ThoughtGenerator(
         self.max_num_thoughts = max_num_thoughts
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can improve based on self-reflection."
 
@@ -138,9 +134,7 @@ class ThoughtGenerator(
     @classmethod
     def create_from_config(cls, config: ThoughtGeneratorConfig) -> ThoughtGenerator:
         if config.agent is not None:
-            return ThoughtGenerator(
-                agent=config.agent, max_num_thoughts=config.max_num_thoughts
-            )
+            return ThoughtGenerator(agent=config.agent, max_num_thoughts=config.max_num_thoughts)
 
         if config.llm is None:
             raise ValueError("`llm` must be provided when `agent` is None.")
@@ -176,9 +170,7 @@ class ThoughtGenerator(
         ] = None,
         parser_name: Optional[str] = None,
     ) -> ThoughtGenerator:
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
 
         agent: AgentComponent = AgentComponent.create(
             llm=llm,
@@ -190,11 +182,7 @@ class ThoughtGenerator(
 
         agent.add_input_preprocessing(
             preprocess=lambda inputs: {
-                **{
-                    key: value
-                    for key, value in inputs.items()
-                    if key != "previous_thoughts"
-                },
+                **{key: value for key, value in inputs.items() if key != "previous_thoughts"},
                 "previous_thoughts": format_thoughts(inputs["previous_thoughts"]),
             }
         )

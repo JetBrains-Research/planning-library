@@ -1,16 +1,19 @@
 from __future__ import annotations
-from planning_library.components import RunnableComponent
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.language_models import BaseChatModel
+
 from textwrap import dedent
-from typing import Optional, Sequence, Tuple, Dict, Any, List, Type
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+
+from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from typing_extensions import TypedDict
+
+from planning_library.components import RunnableComponent
 from planning_library.function_calling_parsers import (
-    ParserRegistry,
     BaseFunctionCallingMultiActionParser,
     BaseFunctionCallingSingleActionParser,
+    ParserRegistry,
 )
 
 
@@ -25,19 +28,13 @@ class PreprocessedReflexionSelfReflectionInput(TypedDict):
     agent_outcome: str
 
 
-class ReflexionSelfReflection(
-    RunnableComponent[ReflexionSelfReflectionInput, Sequence[BaseMessage]]
-):
+class ReflexionSelfReflection(RunnableComponent[ReflexionSelfReflectionInput, Sequence[BaseMessage]]):
     name = "Self-Reflection"
 
-    required_prompt_input_vars = set(ReflexionSelfReflectionInput.__annotations__) - {
-        "inputs"
-    }
+    required_prompt_input_vars = set(ReflexionSelfReflectionInput.__annotations__) - {"inputs"}
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwRGS
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwRGS) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can self-reflect on their shortcomings when solving reasoning tasks."
 
@@ -68,9 +65,7 @@ class ReflexionSelfReflection(
         prompt: Optional[ChatPromptTemplate] = None,
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
-        parser: Optional[
-            BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser
-        ] = None,
+        parser: Optional[BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser] = None,
         parser_name: Optional[str] = None,
     ) -> "ReflexionSelfReflection":
         def _preprocess_input(
@@ -84,15 +79,11 @@ class ReflexionSelfReflection(
             preprocessed_inputs = parser.format_inputs(inputs)
             return {
                 **preprocessed_inputs["inputs"],
-                "agent_outcome": preprocessed_inputs["agent_outcome"].return_values[  # type: ignore[typeddict-item]
-                    "output"
-                ],
+                "agent_outcome": preprocessed_inputs["agent_outcome"].return_values["output"],  # type: ignore[typeddict-item]
                 "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
             }
 
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
 
         # TODO: figure out typing here
         self_reflection: ReflexionSelfReflection = cls.create_from_steps(  # type: ignore[assignment]

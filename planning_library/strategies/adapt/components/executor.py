@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+
+from langchain_core.agents import AgentAction, AgentFinish
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
+from langchain_core.language_models import BaseChatModel
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import Runnable, RunnableLambda
+from langchain_core.tools import BaseTool
+from typing_extensions import TypedDict
 
 from planning_library.action_executors import (
     BaseActionExecutor,
@@ -11,20 +19,11 @@ from planning_library.action_executors import (
 )
 from planning_library.components import RunnableComponent
 from planning_library.components.agent_component import AgentFactory
-from planning_library.strategies import SimpleStrategy
-from typing import Dict, Any, Tuple, List
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.runnables import Runnable, RunnableLambda
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
-from typing_extensions import TypedDict
-from typing import Union, Sequence
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
 from planning_library.function_calling_parsers import (
-    BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
 )
-from dataclasses import dataclass
+from planning_library.strategies import SimpleStrategy
 
 
 class ADaPTExecutorInput(TypedDict):
@@ -75,9 +74,7 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
         self._action_executor = action_executor
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent."
 
@@ -107,8 +104,7 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
             return_values={
                 key: value[0]
                 for key, value in outputs.items()
-                if isinstance(key, list)
-                and key not in ["finish_log", "intermediate_steps"]
+                if isinstance(key, list) and key not in ["finish_log", "intermediate_steps"]
             },
             log=outputs["finish_log"][0],
         )
@@ -151,13 +147,9 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
             assert action_executor is not None, "Either pass tools or action executor."
             tools = action_executor.tools
 
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
 
-        agent = AgentFactory.create_agent(
-            llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name
-        )
+        agent = AgentFactory.create_agent(llm=llm, tools=tools, prompt=prompt, parser=parser, parser_name=parser_name)
 
         strategy = SimpleStrategy.create(
             tools=tools,
@@ -189,6 +181,4 @@ class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):
         run_manager: Optional[AsyncCallbackManager] = None,
         **kwargs,
     ) -> None:
-        await self._action_executor.areset(
-            actions=actions, run_manager=run_manager, **kwargs
-        )
+        await self._action_executor.areset(actions=actions, run_manager=run_manager, **kwargs)

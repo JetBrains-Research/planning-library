@@ -1,15 +1,16 @@
 from __future__ import annotations
+
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Sequence
+from typing import Any, Dict, List, Optional, Sequence, SupportsFloat, Tuple
 
 import gymnasium as gym
-from gymnasium.core import SupportsFloat
 from langchain_core.agents import AgentAction
-from langchain_core.tools import BaseTool
 from langchain_core.callbacks import CallbackManager
+from langchain_core.tools import BaseTool
 
-from .tools import AddTool, MultiplyTool, SubtractTool, DivideTool
 from planning_library.action_executors import LangchainActionExecutor
+
+from .tools import AddTool, DivideTool, MultiplyTool, SubtractTool
 
 
 class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
@@ -30,9 +31,7 @@ class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
 
     @property
     def numbers(self) -> str:
-        return " ".join(
-            [str(key) for key, value in self._numbers.items() for _ in range(value)]
-        )
+        return " ".join([str(key) for key, value in self._numbers.items() for _ in range(value)])
 
     @numbers.setter
     def numbers(self, numbers: List[float | int]):
@@ -74,10 +73,10 @@ class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
         )
 
     def step(
-        self, inputs: Tuple[AgentAction, Optional[CallbackManager]]
+        self, action: Tuple[AgentAction, Optional[CallbackManager]]
     ) -> Tuple[str, SupportsFloat, bool, bool, Dict[str, Any]]:
-        action, run_manager = inputs
-        result = self._action_executor.execute(action, run_manager=run_manager)
+        lc_action, run_manager = action
+        result = self._action_executor.execute(lc_action, run_manager=run_manager)
         return result.observation
 
     def reset(
@@ -94,9 +93,7 @@ class GameOf24Env(gym.Env[str, Tuple[AgentAction, Optional[CallbackManager]]]):
 
         if options is not None and "trajectory" in options:
             for action, step in options["trajectory"]:
-                assert isinstance(
-                    action, AgentAction
-                ), f"Expected AgentAction, got {action}"
+                assert isinstance(action, AgentAction), f"Expected AgentAction, got {action}"
                 observation, reward, terminated, truncated, info = self.step(
                     (
                         action,

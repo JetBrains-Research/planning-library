@@ -1,11 +1,10 @@
+from abc import ABC, abstractmethod
 from textwrap import dedent
-from typing import Any, Tuple, Type, Dict
+from typing import Any, Dict, SupportsFloat, Tuple, Type
 
+import gymnasium as gym
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
-from gymnasium.core import SupportsFloat
-import gymnasium as gym
-from abc import ABC, abstractmethod
 
 
 class BaseGameof24Tool(BaseModel, ABC):
@@ -57,12 +56,8 @@ class BaseGameof24Tool(BaseModel, ABC):
 
 
 class CalculatorInput(BaseModel):
-    number1: float = Field(
-        description="The first argument in an arithmetical operation."
-    )
-    number2: float = Field(
-        description="The second argument in an arithmetical operation."
-    )
+    number1: float = Field(description="The first argument in an arithmetical operation.")
+    number2: float = Field(description="The second argument in an arithmetical operation.")
 
 
 class AddTool(BaseGameof24Tool, BaseTool):
@@ -74,7 +69,7 @@ class AddTool(BaseGameof24Tool, BaseTool):
     * terminated: if True, the game has ended: there's no possible actions anymore;
     * truncated: if True, the time limit has been exceeded;
     * info: the remaining numbers""")
-    args_schema: Type[BaseModel] = CalculatorInput
+    args_schema: Type[BaseModel] = CalculatorInput  # type: ignore
 
     def _operation(self, number1: float, number2: float) -> float:
         return number1 + number2
@@ -89,7 +84,7 @@ class SubtractTool(BaseGameof24Tool, BaseTool):
     * terminated: if True, the game has ended: there's no possible actions anymore;
     * truncated: if True, the time limit has been exceeded;
     * info: the remaining numbers""")
-    args_schema: Type[BaseModel] = CalculatorInput
+    args_schema: Type[BaseModel] = CalculatorInput  # type: ignore
 
     def _operation(self, number1: float, number2: float) -> float:
         return number1 - number2
@@ -104,7 +99,7 @@ class MultiplyTool(BaseGameof24Tool, BaseTool):
     * terminated: if True, the game has ended: there's no possible actions anymore;
     * truncated: if True, the time limit has been exceeded;
     * info: the remaining numbers""")
-    args_schema: Type[BaseModel] = CalculatorInput
+    args_schema: Type[BaseModel] = CalculatorInput  # type: ignore
 
     def _operation(self, number1: float, number2: float) -> float:
         return number1 * number2
@@ -119,7 +114,7 @@ class DivideTool(BaseGameof24Tool, BaseTool):
     * terminated: if True, the game has ended: there's no possible actions anymore;
     * truncated: if True, the time limit has been exceeded;
     * info: the remaining numbers""")
-    args_schema: Type[BaseModel] = CalculatorInput
+    args_schema: Type[BaseModel] = CalculatorInput  # type: ignore
 
     def _operation(self, number1: float, number2: float) -> float:
         return number1 / number2

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from textwrap import dedent
-from typing import Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-
-from planning_library.components import AgentComponent
-from typing import Tuple, Dict, Any, List, Sequence
 from langchain_core.agents import AgentAction
 from langchain_core.messages import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from typing_extensions import TypedDict
+
+from planning_library.components import AgentComponent
 
 
 class ReflexionActorInput(TypedDict):
@@ -35,9 +34,7 @@ class ReflexionActor(AgentComponent[ReflexionActorInput]):
     } | {"agent_scratchpad"}
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
             system_message = "You are an advanced reasoning agent that can improve based on self-reflection."
 

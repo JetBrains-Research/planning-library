@@ -1,25 +1,23 @@
 from __future__ import annotations
-from typing import List, overload, Sequence, Optional
+
+from typing import List, Optional, Sequence, overload
 
 from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.callbacks import (
+    AsyncCallbackManager,
+    CallbackManager,
+)
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt.tool_executor import ToolExecutor  # type: ignore[import-untyped]
+
 from .base_action_executor import BaseActionExecutor
-from langchain_core.callbacks import (
-    CallbackManager,
-    AsyncCallbackManager,
-)
 from .meta_tools import MetaTools
 
 
 class LangchainActionExecutor(BaseActionExecutor):
-    def __init__(
-        self, tools: Sequence[BaseTool], meta_tools: Optional[MetaTools] = None
-    ):
+    def __init__(self, tools: Sequence[BaseTool], meta_tools: Optional[MetaTools] = None):
         self._tool_executor = ToolExecutor(tools)
-        self._meta_tool_executor = (
-            ToolExecutor(meta_tools.tools) if meta_tools else None
-        )
+        self._meta_tool_executor = ToolExecutor(meta_tools.tools) if meta_tools else None
         self._meta_tool_names = meta_tools.tool_names_map if meta_tools else {}
 
     @property
@@ -48,7 +46,7 @@ class LangchainActionExecutor(BaseActionExecutor):
                         log="Invoking reset tool.",
                     )
                 ],
-                tool_executor=self._meta_tool_executor,
+                tool_executor=self._meta_tool_executor,  # type: ignore[reportArgumentType]
                 run_manager=run_manager,
             )
             if actions:
@@ -69,6 +67,14 @@ class LangchainActionExecutor(BaseActionExecutor):
         run_manager: Optional[CallbackManager] = None,
         **kwargs,
     ) -> AgentStep: ...
+
+    def execute(
+        self,
+        actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> List[AgentStep] | AgentStep:
+        return self._execute(actions, self._tool_executor, run_manager)
 
     def _execute(
         self,
@@ -92,14 +98,6 @@ class LangchainActionExecutor(BaseActionExecutor):
         )
         return AgentStep(action=actions, observation=observation)
 
-    def execute(
-        self,
-        actions: List[AgentAction] | AgentAction,
-        run_manager: Optional[CallbackManager] = None,
-        **kwargs,
-    ) -> List[AgentStep] | AgentStep:
-        return self._execute(actions, self._tool_executor, run_manager)
-
     async def areset(
         self,
         actions: Optional[List[AgentAction]] = None,
@@ -116,7 +114,7 @@ class LangchainActionExecutor(BaseActionExecutor):
                         log="Invoking reset tool.",
                     )
                 ],
-                tool_executor=self._meta_tool_executor,
+                tool_executor=self._meta_tool_executor,  # type: ignore[reportArgumentType]
                 run_manager=run_manager,
             )
             if actions:
@@ -137,6 +135,14 @@ class LangchainActionExecutor(BaseActionExecutor):
         run_manager: Optional[AsyncCallbackManager] = None,
         **kwargs,
     ) -> AgentStep: ...
+
+    async def aexecute(
+        self,
+        actions: List[AgentAction] | AgentAction,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
+    ) -> List[AgentStep] | AgentStep:
+        return await self._aexecute(actions, self._tool_executor, run_manager)
 
     async def _aexecute(
         self,
@@ -160,11 +166,3 @@ class LangchainActionExecutor(BaseActionExecutor):
             config={"callbacks": run_manager} if run_manager else {},
         )
         return AgentStep(action=actions, observation=observation)
-
-    async def aexecute(
-        self,
-        actions: List[AgentAction] | AgentAction,
-        run_manager: Optional[AsyncCallbackManager] = None,
-        **kwargs,
-    ) -> List[AgentStep] | AgentStep:
-        return await self._aexecute(actions, self._tool_executor, run_manager)

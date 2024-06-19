@@ -1,8 +1,8 @@
+from .adapt import ADaPTStrategy
 from .base_strategy import BaseCustomStrategy, BaseLangGraphStrategy
 from .reflexion import ReflexionStrategy
-from .tot_dfs import TreeOfThoughtsDFSStrategy
 from .simple import SimpleStrategy
-from .adapt import ADaPTStrategy
+from .tot_dfs import TreeOfThoughtsDFSStrategy
 
 __all__ = [
     "BaseCustomStrategy",

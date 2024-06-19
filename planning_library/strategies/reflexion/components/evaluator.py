@@ -1,19 +1,22 @@
 from __future__ import annotations
-from planning_library.components.evaluation import EvaluatorComponent
-from typing import Tuple, Dict, Any, List, Optional, Generic, Type
-from planning_library.components.base_component import OutputType
+
+from textwrap import dedent
+from typing import Any, Dict, Generic, List, Optional, Tuple, Type
+
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.language_models import BaseChatModel
-from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.messages import BaseMessage
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from textwrap import dedent
+from typing_extensions import TypedDict
+
+from planning_library.components.base_component import OutputType
+from planning_library.components.evaluation import EvaluatorComponent
 from planning_library.function_calling_parsers import (
-    ParserRegistry,
     BaseFunctionCallingMultiActionParser,
     BaseFunctionCallingSingleActionParser,
+    ParserRegistry,
 )
-from typing_extensions import TypedDict
 
 
 class ReflexionEvaluatorInput(TypedDict):
@@ -27,21 +30,17 @@ class PreprocessedReflexionEvaluatorInput(TypedDict):
     agent_outcome: str
 
 
-class ReflexionEvaluator(
-    Generic[OutputType], EvaluatorComponent[ReflexionEvaluatorInput, OutputType]
-):
+class ReflexionEvaluator(Generic[OutputType], EvaluatorComponent[ReflexionEvaluatorInput, OutputType]):
     name = "Evaluator"
 
-    required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__) - {
-        "inputs"
-    }
+    required_prompt_input_vars = set(ReflexionEvaluatorInput.__annotations__) - {"inputs"}
 
     @classmethod
-    def _create_default_prompt(
-        cls, system_message: Optional[str], user_message: str, **kwargs
-    ) -> ChatPromptTemplate:
+    def _create_default_prompt(cls, system_message: Optional[str], user_message: str, **kwargs) -> ChatPromptTemplate:
         if system_message is None:
-            system_message = "You are an advanced reasoning assistant that judges whether the episodes result in success or failure."
+            system_message = (
+                "You are an advanced reasoning assistant that judges whether the episodes result in success or failure."
+            )
 
         return ChatPromptTemplate.from_messages(
             [
@@ -73,9 +72,7 @@ class ReflexionEvaluator(
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
         output_parser: Optional[BaseOutputParser[float]] = None,
-        parser: Optional[
-            BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser
-        ] = None,
+        parser: Optional[BaseFunctionCallingSingleActionParser | BaseFunctionCallingMultiActionParser] = None,
         parser_name: Optional[str] = None,
     ) -> "ReflexionEvaluator[float]":
         def _preprocess_input(
@@ -90,9 +87,7 @@ class ReflexionEvaluator(
             preprocessed_inputs = parser.format_inputs(inputs)
             return {
                 **preprocessed_inputs["inputs"],
-                "agent_outcome": preprocessed_inputs["agent_outcome"].return_values[  # type: ignore[typeddict-item]
-                    "output"
-                ],
+                "agent_outcome": preprocessed_inputs["agent_outcome"].return_values["output"],  # type: ignore[typeddict-item]
                 "intermediate_steps": preprocessed_inputs["agent_scratchpad"],
             }
 

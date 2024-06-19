@@ -1,30 +1,25 @@
-from typing import List, Union, Dict, Type
+from typing import Dict, List, Type, Union
+
 from planning_library.function_calling_parsers import (
-    BaseFunctionCallingSingleActionParser,
     BaseFunctionCallingMultiActionParser,
+    BaseFunctionCallingSingleActionParser,
 )
 
 
 class ParserRegistry:
     registry: Dict[
         str,
-        Union[
-            BaseFunctionCallingSingleActionParser, BaseFunctionCallingMultiActionParser
-        ],
+        Union[BaseFunctionCallingSingleActionParser, BaseFunctionCallingMultiActionParser],
     ] = {}
 
     @classmethod
     def get_parser(
         cls, parser_name
-    ) -> Union[
-        BaseFunctionCallingSingleActionParser, BaseFunctionCallingMultiActionParser
-    ]:
+    ) -> Union[BaseFunctionCallingSingleActionParser, BaseFunctionCallingMultiActionParser]:
         try:
             return cls.registry[parser_name]
         except KeyError:
-            raise ValueError(
-                f"Unknown parser {parser_name}. Currently available are: {cls.get_available_parsers()}"
-            )
+            raise ValueError(f"Unknown parser {parser_name}. Currently available are: {cls.get_available_parsers()}")
 
     @classmethod
     def get_available_parsers(cls) -> List[str]:

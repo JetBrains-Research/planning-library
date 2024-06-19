@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, overload, Sequence, Optional
+from typing import List, Optional, Sequence, overload
+
 from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.tools import BaseTool
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 
 
 class BaseActionExecutor(ABC):
@@ -33,6 +34,7 @@ class BaseActionExecutor(ABC):
         ...
 
     @overload
+    @abstractmethod
     def execute(
         self,
         actions: List[AgentAction],
@@ -41,6 +43,7 @@ class BaseActionExecutor(ABC):
     ) -> List[AgentStep]: ...
 
     @overload
+    @abstractmethod
     def execute(
         self,
         actions: AgentAction,
@@ -67,6 +70,7 @@ class BaseActionExecutor(ABC):
         ...
 
     @overload
+    @abstractmethod
     async def aexecute(
         self,
         actions: List[AgentAction],
@@ -75,6 +79,7 @@ class BaseActionExecutor(ABC):
     ) -> List[AgentStep]: ...
 
     @overload
+    @abstractmethod
     async def aexecute(
         self,
         actions: AgentAction,

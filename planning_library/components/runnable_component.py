@@ -1,10 +1,12 @@
-from typing import Optional, Dict, Callable, Awaitable
-from langchain_core.runnables import Runnable, RunnableLambda
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import BaseOutputParser
+from typing import Awaitable, Callable, Dict, Optional
+
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.language_models import BaseChatModel
-from .base_component import InputType, OutputType, BaseComponent
+from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable, RunnableLambda
+
+from .base_component import BaseComponent, InputType, OutputType
 
 
 class RunnableComponent(BaseComponent[InputType, OutputType]):
@@ -20,9 +22,7 @@ class RunnableComponent(BaseComponent[InputType, OutputType]):
         user_message: Optional[str] = None,
         system_message: Optional[str] = None,
     ) -> "RunnableComponent":
-        prompt = cls._process_prompt(
-            prompt=prompt, user_message=user_message, system_message=system_message
-        )
+        prompt = cls._process_prompt(prompt=prompt, user_message=user_message, system_message=system_message)
         runnable = prompt | llm
         if output_parser is not None:
             runnable = runnable | output_parser
@@ -42,9 +42,7 @@ class RunnableComponent(BaseComponent[InputType, OutputType]):
     ) -> None:
         self.runnable = self.runnable | RunnableLambda(preprocess, afunc=apreprocess)
 
-    def invoke(
-        self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs
-    ) -> OutputType:
+    def invoke(self, inputs: InputType, run_manager: Optional[CallbackManager] = None, **kwargs) -> OutputType:
         config = kwargs
         if "callbacks" not in config and run_manager:
             config["callbacks"] = run_manager
