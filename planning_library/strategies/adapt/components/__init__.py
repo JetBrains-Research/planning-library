@@ -1,4 +1,4 @@
-from .executors import BaseADaPTExecutor
-from .planners import BaseADaPTPlanner
+from .executor import ADaPTExecutor
+from .planner import ADaPTPlanner
 
-__all__ = ["BaseADaPTExecutor", "BaseADaPTPlanner"]
+__all__ = ["ADaPTExecutor", "ADaPTPlanner"]

@@ -26,18 +26,13 @@ class ToTNode:
         trajectory_actions: List[Tuple[AgentAction, str]] = []
         while node is not None:
             if isinstance(node.thought, list):
-                assert isinstance(node.observation, list) and len(node.thought) == len(
-                    node.observation
-                )
+                assert isinstance(node.observation, list) and len(node.thought) == len(node.observation)
                 trajectory_actions.extend(
-                    (observation.action, observation.observation)
-                    for observation in node.observation
+                    (observation.action, observation.observation) for observation in node.observation
                 )
             elif isinstance(node.thought, AgentAction):
                 assert isinstance(node.observation, AgentStep)
-                trajectory_actions.append(
-                    (node.observation.action, node.observation.observation)
-                )
+                trajectory_actions.append((node.observation.action, node.observation.observation))
             elif isinstance(node.thought, AgentFinish) and node is not self:
                 raise ValueError("AgentFinish detected as non-terminal node.")
 

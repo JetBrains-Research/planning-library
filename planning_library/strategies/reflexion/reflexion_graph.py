@@ -6,23 +6,29 @@ from typing import (
     List,
     Literal,
     Optional,
+    Sequence,
     Tuple,
     TypedDict,
     Union,
 )
-from langchain.memory import ChatMessageHistory
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage
 
+from langchain.memory import ChatMessageHistory
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END, StateGraph  # type: ignore[import]
 from langgraph.pregel import Pregel  # type: ignore[import-untyped]
 
 from ...action_executors import BaseActionExecutor
-from .components.actors import BaseActor
-from .components.evaluators import ReflexionEvaluator
-from .components.self_reflections import BaseSelfReflection
+from .components import (
+    ReflexionActor,
+    ReflexionActorInput,
+    ReflexionEvaluator,
+    ReflexionEvaluatorInput,
+    ReflexionSelfReflection,
+    ReflexionSelfReflectionInput,
+)
 
 
 class ReflexionState(TypedDict):
@@ -30,26 +36,33 @@ class ReflexionState(TypedDict):
 
     inputs: Dict[str, Any]
     agent_outcome: Optional[Union[List[AgentAction], AgentAction, AgentFinish]]
-    evaluator_score: Any
     evaluator_should_continue: Optional[bool]
     self_reflection_memory: BaseChatMessageHistory
-    self_reflections: List[BaseMessage]
+    self_reflections: Sequence[BaseMessage]
     intermediate_steps: List[Tuple[AgentAction, str]]
     iteration: int
 
 
 class ReflexionNodes:
     @staticmethod
-    def init(
-        state: ReflexionState, memory: Optional[BaseChatMessageHistory] = None
-    ) -> ReflexionState:
+    def _format_self_reflections(
+        self_reflections: List[Tuple[str, str]],
+    ) -> Sequence[BaseMessage]:
+        result = []
+        for t in self_reflections:
+            if t[0] == "content":
+                content = t[1]
+                message = AIMessage(content=content)
+                result.append(message)
+
+        return result
+
+    @staticmethod
+    def init(state: ReflexionState, memory: Optional[BaseChatMessageHistory] = None) -> ReflexionState:
         """The entry node in the graph. Initializes the state correctly."""
         state["agent_outcome"] = None
-        state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
-        state["self_reflection_memory"] = (
-            ChatMessageHistory() if memory is None else memory
-        )
+        state["self_reflection_memory"] = ChatMessageHistory() if memory is None else memory
         state["self_reflections"] = []
         state["intermediate_steps"] = []
         state["iteration"] = 1
@@ -62,11 +75,13 @@ class ReflexionNodes:
     ) -> ReflexionState:
         """The first node that gets called after at least one iteration. Handles the advance of the loop interation correctly."""
         state["agent_outcome"] = None
-        state["evaluator_score"] = None
         state["evaluator_should_continue"] = None
         state["intermediate_steps"] = []
         state["iteration"] += 1
-        state["self_reflections"] = state["self_reflection_memory"].messages
+        # TODO: why does memory return list of tuples instead of messages as expected? some serialization stuff?
+        state["self_reflections"] = ReflexionNodes._format_self_reflections(
+            state["self_reflection_memory"].messages  # type: ignore[arg-type]
+        )
 
         if reset_environment:
             reset_environment(state["inputs"])
@@ -74,23 +89,27 @@ class ReflexionNodes:
         return state
 
     @staticmethod
-    def act(state: ReflexionState, actor: BaseActor) -> ReflexionState:
+    def act(state: ReflexionState, actor: ReflexionActor) -> ReflexionState:
         """Synchronous version of calling an agent and returning its result."""
-        agent_outcome = actor.act(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            self_reflections=state["self_reflections"],
+        agent_outcome = actor.invoke(
+            ReflexionActorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                self_reflections=state["self_reflections"],
+            )
         )
         state["agent_outcome"] = agent_outcome
         return state
 
     @staticmethod
-    async def aact(state: ReflexionState, actor: BaseActor) -> ReflexionState:
+    async def aact(state: ReflexionState, actor: ReflexionActor) -> ReflexionState:
         """Asynchronous version of calling an agent and returning its result."""
-        agent_outcome = await actor.aact(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            self_reflections=state["self_reflections"],
+        agent_outcome = await actor.ainvoke(
+            ReflexionActorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                self_reflections=state["self_reflections"],
+            )
         )
 
         state["agent_outcome"] = agent_outcome
@@ -102,9 +121,7 @@ class ReflexionNodes:
         action_executor: BaseActionExecutor,
     ) -> ReflexionState:
         """Synchronous version of executing actions as previously requested by an agent."""
-        assert (
-            state["agent_outcome"] is not None
-        ), "Agent outcome should be defined on the tool execution step."
+        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
@@ -114,13 +131,9 @@ class ReflexionNodes:
         )
 
         if isinstance(observation, AgentStep):
-            state["intermediate_steps"].append(
-                (observation.action, observation.observation)
-            )
+            state["intermediate_steps"].append((observation.action, observation.observation))
         else:
-            state["intermediate_steps"].extend(
-                [(obs.action, obs.observation) for obs in observation]
-            )
+            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
         return state
 
     @staticmethod
@@ -129,9 +142,7 @@ class ReflexionNodes:
         action_executor: BaseActionExecutor,
     ) -> ReflexionState:
         """Asynchronous version of executing tools as previously requested by an agent."""
-        assert (
-            state["agent_outcome"] is not None
-        ), "Agent outcome should be defined on the tool execution step."
+        assert state["agent_outcome"] is not None, "Agent outcome should be defined on the tool execution step."
         assert not isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should not be AgentFinish on the tool execution step."
@@ -141,82 +152,74 @@ class ReflexionNodes:
         )
 
         if isinstance(observation, AgentStep):
-            state["intermediate_steps"].append(
-                (observation.action, observation.observation)
-            )
+            state["intermediate_steps"].append((observation.action, observation.observation))
         else:
-            state["intermediate_steps"].extend(
-                [(obs.action, obs.observation) for obs in observation]
-            )
+            state["intermediate_steps"].extend([(obs.action, obs.observation) for obs in observation])
         return state
 
     @staticmethod
-    def evaluate(
-        state: ReflexionState, evaluator: ReflexionEvaluator
-    ) -> ReflexionState:
+    def evaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
         """Synchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
-        value, should_continue = evaluator.evaluate(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
+        should_continue = evaluator.invoke(
+            ReflexionEvaluatorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
-        state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
     @staticmethod
-    async def aevaluate(
-        state: ReflexionState, evaluator: ReflexionEvaluator
-    ) -> ReflexionState:
+    async def aevaluate(state: ReflexionState, evaluator: ReflexionEvaluator) -> ReflexionState:
         """Asynchronous version of evaluating the outcome of the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the evaluation step."
 
-        value, should_continue = await evaluator.aevaluate(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
+        should_continue = await evaluator.ainvoke(
+            ReflexionEvaluatorInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
-        state["evaluator_score"] = value
         state["evaluator_should_continue"] = should_continue
         return state
 
     @staticmethod
-    def self_reflect(
-        state: ReflexionState, self_reflection: BaseSelfReflection
-    ) -> ReflexionState:
+    def self_reflect(state: ReflexionState, self_reflection: ReflexionSelfReflection) -> ReflexionState:
         """Synchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
 
-        reflection = self_reflection.self_reflect(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
-            evaluator_score=state["evaluator_score"],
+        reflection = self_reflection.invoke(
+            ReflexionSelfReflectionInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
         state["self_reflection_memory"].add_messages(reflection)
         return state
 
     @staticmethod
-    async def aself_reflect(
-        state: ReflexionState, self_reflection: BaseSelfReflection
-    ) -> ReflexionState:
+    async def aself_reflect(state: ReflexionState, self_reflection: ReflexionSelfReflection) -> ReflexionState:
         """Asynchronous version of self-reflecting on the current trial."""
         assert isinstance(
             state["agent_outcome"], AgentFinish
         ), "Agent outcome should be AgentFinish on the self-reflection step."
 
-        reflection = await self_reflection.aself_reflect(
-            inputs=state["inputs"],
-            intermediate_steps=state["intermediate_steps"],
-            agent_outcome=state["agent_outcome"],
-            evaluator_score=state["evaluator_score"],
+        reflection = await self_reflection.ainvoke(
+            ReflexionSelfReflectionInput(
+                inputs=state["inputs"],
+                intermediate_steps=state["intermediate_steps"],
+                agent_outcome=state["agent_outcome"],
+            )
         )
         await state["self_reflection_memory"].aadd_messages(reflection)
         return state
@@ -257,9 +260,9 @@ class ReflexionEdges:
 
 
 def create_reflexion_graph(
-    actor: BaseActor,
+    actor: ReflexionActor,
     evaluator: ReflexionEvaluator,
-    self_reflection: BaseSelfReflection,
+    self_reflection: ReflexionSelfReflection,
     action_executor: BaseActionExecutor,
     max_iterations: Optional[int],
     reset_environment: Optional[Callable[[Dict[str, Any]], None]],
@@ -304,9 +307,7 @@ def create_reflexion_graph(
         "self_reflect",
         RunnableLambda(
             partial(ReflexionNodes.self_reflect, self_reflection=self_reflection),
-            afunc=partial(
-                ReflexionNodes.aself_reflect, self_reflection=self_reflection
-            ),
+            afunc=partial(ReflexionNodes.aself_reflect, self_reflection=self_reflection),
         ),
     )
 
@@ -329,9 +330,7 @@ def create_reflexion_graph(
     )
     builder.add_conditional_edges(
         "self_reflect",
-        partial(
-            ReflexionEdges.should_continue_num_iterations, max_iterations=max_iterations
-        ),
+        partial(ReflexionEdges.should_continue_num_iterations, max_iterations=max_iterations),
         {"yes": "re_init", "no": END},
     )
     builder.add_edge("re_init", "act")

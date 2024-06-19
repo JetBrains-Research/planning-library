@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, overload, Sequence, Optional
+from typing import List, Optional, Sequence, overload
+
 from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.callbacks import AsyncCallbackManager, CallbackManager
 from langchain_core.tools import BaseTool
-from langchain_core.callbacks import CallbackManager, AsyncCallbackManager
 
 
 class BaseActionExecutor(ABC):
@@ -13,25 +14,40 @@ class BaseActionExecutor(ABC):
     def tools(self) -> Sequence[BaseTool]: ...
 
     @abstractmethod
-    def reset(self, actions: Optional[List[AgentAction]] = None, **kwargs) -> None:
+    def reset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[CallbackManager] = None,
+        **kwargs,
+    ) -> None:
+        """Resets the current state. If actions are passed, will also execute them."""
+        ...
+
+    @abstractmethod
+    async def areset(
+        self,
+        actions: Optional[List[AgentAction]] = None,
+        run_manager: Optional[AsyncCallbackManager] = None,
+        **kwargs,
+    ) -> None:
         """Resets the current state. If actions are passed, will also execute them."""
         ...
 
     @overload
+    @abstractmethod
     def execute(
         self,
         actions: List[AgentAction],
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
     @overload
+    @abstractmethod
     def execute(
         self,
         actions: AgentAction,
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -40,7 +56,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[CallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions.
@@ -55,20 +70,20 @@ class BaseActionExecutor(ABC):
         ...
 
     @overload
+    @abstractmethod
     async def aexecute(
         self,
         actions: List[AgentAction],
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep]: ...
 
     @overload
+    @abstractmethod
     async def aexecute(
         self,
         actions: AgentAction,
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> AgentStep: ...
 
@@ -77,7 +92,6 @@ class BaseActionExecutor(ABC):
         self,
         actions: List[AgentAction] | AgentAction,
         run_manager: Optional[AsyncCallbackManager] = None,
-        reset_before_action: bool = False,
         **kwargs,
     ) -> List[AgentStep] | AgentStep:
         """Performs actions asynchronously.

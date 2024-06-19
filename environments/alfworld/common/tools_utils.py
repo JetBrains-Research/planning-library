@@ -7,9 +7,7 @@ class EmptyInput(BaseModel): ...
 
 
 class ObjectInput(BaseModel):
-    object_type: str = Field(
-        description="A type of the portable object.", examples=["apple", "mug"]
-    )
+    object_type: str = Field(description="A type of the portable object.", examples=["apple", "mug"])
     object_id: int = Field(
         description="A specific number associated with the object (e.g., when there are "
         "several mugs in the room, those would be mug 1 and mug 2).",
@@ -30,9 +28,7 @@ class ReceptableInput(BaseModel):
 
 
 class ObjectAndReceptableInput(BaseModel):
-    object_type: str = Field(
-        description="A type of the portable object.", examples=["apple", "mug"]
-    )
+    object_type: str = Field(description="A type of the portable object.", examples=["apple", "mug"])
     object_id: int = Field(
         description="A specific number associated with the object (e.g., when there are "
         "several mugs in the room, those would be mug 1 and mug 2).",

@@ -15,6 +15,4 @@ class ALFWorldEvaluateOutputParser(BaseOutputParser[float]):
                 raise ValueError("The given number is out of (0.0, 1.0) range.")
             return result
         except ValueError:
-            raise OutputParserException(
-                f"Couldn't convert {text} to float between 0 and 1."
-            )
+            raise OutputParserException(f"Couldn't convert {text} to float between 0 and 1.")
