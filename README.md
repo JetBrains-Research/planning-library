@@ -6,18 +6,16 @@ Library with planning algorithms for AI Agents built with [LangChain](https://ww
 
 ### As a package
 
-Currently, only installation from source is supported. 
-
 * For Poetry:
 
     ```shell
-    poetry add git+https://github.com/JetBrains-Research/planning-library.git
+    poetry add planning-library
     ```
 
 * For pip:
 
     ```shell
-    pip install git+https://github.com/JetBrains-Research/planning-library.git
+    pip install planning-library
     ```
 
 ### For development

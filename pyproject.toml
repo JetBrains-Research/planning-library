@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "planning-library"
-version = "0.1.2"
+version = "0.1.3"
 description = "LangChain-based library with planning algorithms for AI Agents."
 authors = ["Alexandra Eliseeva <alexandra.eliseeva@jetbrains.com>"]
 license = "MIT"
+readme = "README.md"
 packages = [
     { include = "planning_library" },
     { include = "planning_library/py.typed" },

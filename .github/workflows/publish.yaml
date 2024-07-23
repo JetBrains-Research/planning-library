@@ -26,8 +26,12 @@ jobs:
     - name: Install and configure Poetry
       uses: snok/install-poetry@v1
 
+    - name: Install SDL dependencies
+      # everything non-python from https://www.pygame.org/wiki/CompileUbuntu?parent=
+      run: sudo apt-get update && sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libfreetype6-dev libportmidi-dev libjpeg-dev build-essential
+
     - name: Install dependencies
-      run: poetry install --no-root
+      run: poetry install --no-root --no-interaction --without dev,examples
 
     - name: Configure Poetry for PyPI
       run: |
