@@ -17,8 +17,6 @@ from langchain_core.callbacks import (
     CallbackManagerForChainRun,
 )
 
-from planning_library.action_executors.meta_tools import MetaTools
-
 
 class BaseCustomStrategy(Chain, ABC):
     return_intermediate_steps: bool = False
@@ -27,28 +25,14 @@ class BaseCustomStrategy(Chain, ABC):
     verbose: bool = True
 
     @property
-    @abstractmethod
     def input_keys(self) -> List[str]:
-        """Return the input keys."""
-        ...
+        """Keys expected to be in the chain input."""
+        return []
 
     @property
-    @abstractmethod
     def output_keys(self) -> List[str]:
-        """Return the singular output key."""
-        ...
-
-    @classmethod
-    @abstractmethod
-    def create(
-        cls,
-        meta_tools: Optional[MetaTools] = None,
-        return_intermediate_steps: bool = False,
-        return_finish_log: bool = False,
-        max_iterations: int = 15,
-        verbose: bool = True,
-        **kwargs,
-    ) -> "BaseCustomStrategy": ...
+        """Keys expected to be in the chain output."""
+        return []
 
     @abstractmethod
     def _run_strategy(

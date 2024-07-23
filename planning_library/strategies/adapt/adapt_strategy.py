@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Tuple
 
 from langchain_core.agents import AgentAction, AgentFinish
@@ -9,10 +8,7 @@ from langchain_core.callbacks import (
     CallbackManagerForChainRun,
 )
 
-from planning_library.action_executors import LangchainActionExecutor, MetaTools
 from planning_library.strategies.adapt.components import ADaPTExecutor, ADaPTPlanner
-from planning_library.strategies.adapt.components.executor import ADaPTExecutorConfig
-from planning_library.strategies.adapt.components.planner import ADaPTPlannerConfig
 
 from ..base_strategy import BaseCustomStrategy
 
@@ -26,86 +22,6 @@ class ADaPTStrategy(BaseCustomStrategy):
     executor: ADaPTExecutor
     planner: ADaPTPlanner
     max_depth: int
-
-    @staticmethod
-    def create(  # type: ignore[reportIncompatibleMethodOverride]
-        meta_tools: Optional[MetaTools] = None,
-        return_intermediate_steps: bool = False,
-        return_finish_log: bool = False,
-        max_iterations: int = 15,
-        verbose: bool = True,
-        executor_config: Optional[ADaPTExecutorConfig] = None,
-        planner_config: Optional[ADaPTPlannerConfig] = None,
-        max_depth: int = 20,
-        **kwargs,
-    ) -> "ADaPTStrategy":
-        """Creates an instance of ADaPT strategy.
-
-        Args:
-            action_executor: The action executor for the current strategy. If None, the default will be used.
-            executor_config: Configuration for the Executor component of ADaPT strategy.
-            planner_config: Configuration for the Planner component of ADaPT strategy.
-            return_intermediate_steps: True to additionally return a list of intermediate steps, False to simply return final outputs.
-            return_finish_log: True to additionally return the finish log of the agent, False to simply return output values.
-            max_iterations: Maximum allowed number of agent iterations for Executor and Planner.
-            max_depth: Maximum depth of the ADaPT strategy (how deep the decomposition can go).
-            verbose: True to print extra information during execution.
-        """
-        # TODO: runnable component vs strategy component?
-        assert executor_config is not None, "Default ADaPT executor is currently not supported."
-
-        if executor_config.runnable is not None:
-            executor = ADaPTExecutor(
-                executor_config.runnable,
-                action_executor=LangchainActionExecutor(
-                    tools=executor_config.tools if executor_config.tools else [],
-                    meta_tools=executor_config.meta_tools,
-                ),
-            )
-        else:
-            executor = ADaPTExecutor.create_simple_strategy(
-                **asdict(executor_config),
-                return_intermediate_steps=return_intermediate_steps,
-                return_finish_log=return_finish_log,
-                max_iterations=max_iterations,
-                verbose=verbose,
-            )
-
-        assert planner_config is not None, "Default ADaPT planner is currently not supported."
-
-        if planner_config.runnable is not None:
-            planner = ADaPTPlanner(planner_config.runnable)
-        elif planner_config.mode == "agent":
-            planner = ADaPTPlanner.create_agent_planner(
-                **asdict(planner_config),
-                executor_parser=executor_config.parser,
-                executor_parser_name=executor_config.parser_name,
-                return_intermediate_steps=return_intermediate_steps,
-                return_finish_log=return_finish_log,
-                max_iterations=max_iterations,
-                verbose=verbose,
-            )
-        elif planner_config.mode == "simple":
-            planner = ADaPTPlanner.create_simple_planner(
-                **asdict(planner_config),
-                executor_parser=executor_config.parser,
-                executor_parser_name=executor_config.parser_name,
-            )
-        else:
-            raise ValueError(
-                f"Unknown planner mode `{planner_config.mode}`. Currently supported are: `agent`, `simple`."
-            )
-
-        strategy = ADaPTStrategy(
-            executor=executor,
-            planner=planner,
-            max_depth=max_depth,
-            return_intermediate_steps=return_intermediate_steps,
-            return_finish_log=return_finish_log,
-            max_iterations=max_iterations,
-            verbose=verbose,
-        )
-        return strategy
 
     @property
     def input_keys(self) -> List[str]:

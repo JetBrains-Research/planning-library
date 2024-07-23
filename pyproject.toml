@@ -1,9 +1,15 @@
 [tool.poetry]
 name = "planning-library"
-version = "0.1.1"
-description = ""
-authors = []
+version = "0.1.2"
+description = "LangChain-based library with planning algorithms for AI Agents."
+authors = ["Alexandra Eliseeva <alexandra.eliseeva@jetbrains.com>"]
 license = "MIT"
+packages = [
+    { include = "planning_library" },
+    { include = "planning_library/py.typed" },
+]
+exclude = [
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
@@ -28,8 +34,6 @@ alfworld = {extras = ["full"], version = "^0.3.3"}
 isort = "^5.12.0"
 mypy = "^1.5.0"
 pytest = "^7.4.0"
-wandb = "^0.16.3"
-grandalf = "^0.8"
 ruff = "^0.3.2"
 pyright = "^1.1.368"
 

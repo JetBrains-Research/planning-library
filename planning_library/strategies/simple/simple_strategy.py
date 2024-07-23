@@ -15,7 +15,8 @@ from planning_library.action_executors import (
     LangchainActionExecutor,
     MetaTools,
 )
-from planning_library.strategies import BaseCustomStrategy
+
+from ..base_strategy import BaseCustomStrategy
 
 
 class SimpleStrategy(BaseCustomStrategy):

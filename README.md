@@ -1,4 +1,6 @@
-# 🤖📝 Planning Library
+# 🤖✨ Planning Library
+
+Library with planning algorithms for AI Agents built with [LangChain](https://www.langchain.com/) and [LangGraph](https://langchain-ai.github.io/langgraph/).
 
 ## Installation
 
@@ -35,7 +37,7 @@ git clone git@github.com:JetBrains-Research/planning-library.git
 #### Step 3: Install Python dependencies
 
 * For Poetry: run `poetry install`.
-    * **Note**. If you do not need to run CI or to run examples, you can exclude the corresponding dependencies groups: `poetry install --without dev,examples`  
+    * **Note**. If you do not need to run code quality checks or to run examples, you can exclude the corresponding dependencies groups: `poetry install --without dev,examples`  
 
 ## Quick Tour
 

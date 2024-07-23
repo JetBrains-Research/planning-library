@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -23,7 +22,7 @@ from planning_library.function_calling_parsers import (
     BaseFunctionCallingMultiActionParser,
     BaseFunctionCallingSingleActionParser,
 )
-from planning_library.strategies import SimpleStrategy
+from planning_library.strategies.simple import SimpleStrategy
 
 
 class ADaPTExecutorInput(TypedDict):
@@ -34,31 +33,6 @@ class ADaPTExecutorOutput(TypedDict):
     is_completed: bool
     agent_outcome: AgentFinish
     intermediate_steps: List[Tuple[AgentAction, str]]
-
-
-@dataclass
-class ADaPTExecutorConfig:
-    runnable: Optional[Runnable] = None
-    llm: Optional[BaseChatModel] = None
-    tools: Optional[Sequence[BaseTool]] = None
-    meta_tools: Optional[MetaTools] = None
-    prompt: Optional[ChatPromptTemplate] = None
-    user_message: Optional[str] = None
-    system_message: Optional[str] = None
-    parser: Optional[
-        Union[
-            BaseFunctionCallingSingleActionParser,
-            BaseFunctionCallingMultiActionParser,
-        ]
-    ] = None
-    parser_name: Optional[str] = None
-    executor_parser: Optional[
-        Union[
-            BaseFunctionCallingSingleActionParser,
-            BaseFunctionCallingMultiActionParser,
-        ]
-    ] = None
-    executor_parser_name: Optional[str] = None
 
 
 class ADaPTExecutor(RunnableComponent[ADaPTExecutorInput, ADaPTExecutorOutput]):

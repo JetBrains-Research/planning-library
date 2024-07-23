@@ -1,5 +1,5 @@
 from langchain_core.output_parsers import BaseOutputParser
-from langchain_core.output_parsers.json import parse_and_check_json_markdown
+from langchain_core.utils.json import parse_and_check_json_markdown
 
 from .typing_utils import ADaPTPlannerOutput
 
