@@ -135,10 +135,6 @@ includes a set of prompts, a set of tools and examples of running available stra
     * [Gymnasium](https://gymnasium.farama.org/) env for Game of
       24: [`environments/game_of_24/common/environment.py`](environments/game_of_24/common/environment.py)
     * Tools for Game of 24: [`environments/game_of_24/common/tools.py`](environments/game_of_24/common/tools.py)
-* Strategies:
-    * Tree of Thoughts + DFS
-      example: [`environments/game_of_24/tot_dfs.ipynb`](environments/game_of_24/tot_dfs.ipynb)
-    * Reflexion example: [`environments/game_of_24/reflexion.ipynb`](environments/game_of_24/reflexion.ipynb)
 
 ### :snowflake: FrozenLake
 
@@ -152,10 +148,6 @@ Our implementation of FrozenLake is available under [`environments/frozen_lake`]
     * Env wrapper for
       FrozenLake: [`environments/frozen_lake/common/environment.py`](environments/frozen_lake/common/environment.py)
     * Tools for FrozenLake: [`environments/frozen_lake/common/tools.py`](environments/frozen_lake/common/tools.py)
-* Strategies:
-    * Tree of Thoughts + DFS
-      example: [`environments/frozen_lake/tot_dfs.ipynb`](environments/frozen_lake/tot_dfs.ipynb)
-    * Reflexion example: [`environments/frozen_lake/reflexion.ipynb`](environments/frozen_lake/reflexion.ipynb)
 
 ### :house: ALFWorld
 
@@ -169,6 +161,7 @@ Our implementation of ALFWorld is available under [`environments/alfword`](envir
     * Env wrapper for
       ALFWorld: [`environments/alfworld/common/environment.py`](environments/alfworld/common/environment.py)
     * Tools for ALFWorld: [`environments/alfworld/common/tools.py`](environments/alfworld/common/tools.py)
-* Strategies:
-    * Reflexion example: [`environments/alfworld/reflexion.ipynb`](environments/alfworld/reflexion.ipynb)
-    * ADaPT example: [`environments/alfworld/adapt.ipynb`](environments/alfworld/adapt.ipynb)
+
+## Strategies usage examples
+
+Examples are available under [`examples`](examples) folder.

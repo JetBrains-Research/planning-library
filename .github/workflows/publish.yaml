@@ -35,7 +35,7 @@ jobs:
 
     - name: Configure Poetry for PyPI
       run: |
-        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        poetry config pypi-token.pypi ${{ secrets.PYPI_PASSWORD }}
 
     - name: Publish to PyPI
       run: poetry publish --build -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
