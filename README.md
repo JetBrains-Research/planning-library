@@ -2,6 +2,8 @@
 
 Library with planning algorithms for AI Agents built with [LangChain](https://www.langchain.com/) and [LangGraph](https://langchain-ai.github.io/langgraph/).
 
+![Research](https://jb.gg/badges/research-plastic.svg)
+
 ## Installation
 
 ### As a package
